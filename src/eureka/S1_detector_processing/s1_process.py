@@ -213,6 +213,11 @@ class EurekaS1Pipeline(Detector1Pipeline):
                          "defined or not a float, default is used (4.0)")
         self.gain_scale.skip = meta.skip_gain_scale
 
+        # Save the outputs for each step in the S1 output directory
+        for thisstep in np.array(list(self.steps.keys())):
+            exec('self.{}.save_results=True'.format(thisstep))
+            exec('self.{}.output_dir="{}"'.format(thisstep,meta.outputdir))
+
         # Instrument Specific Steps
         if instrument in ['NIRCAM', 'NIRISS', 'NIRSPEC']:
             self.persistence.skip = meta.skip_persistence
