@@ -173,8 +173,8 @@ class GPModel(Model):
                 mu = gp.predict(residuals, self.kernel_inputs[chan].T,
                                 return_cov=False)
             elif self.gp_code_name == 'celerite':
-                gp.compute(self.kernel_inputs[chan][0], yerr=unc_fit)
-                mu = gp.predict(residuals)
+                gp.compute(self.kernel_inputs[chan][0][~unc_fit.mask], yerr=unc_fit.data[~unc_fit.mask])    
+                mu = gp.predict(residuals.data[~unc_fit.mask],self.kernel_inputs[chan][0],return_cov=False)
             elif self.gp_code_name == 'tinygp':
                 cond_gp = gp.condition(residuals, noise=unc_fit).gp
                 mu = cond_gp.loc
