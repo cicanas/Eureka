@@ -688,6 +688,24 @@ def fit_channel(meta, time, flux, chan, flux_err, eventlabel, params,
                                          nints=lc_model.nints,
                                          num_planets=meta.num_planets)
         modellist.append(t_eclipse)
+    if 'spotrod' in meta.run_myfuncs:
+        s_transit = m.SpotrodTransitModel(parameters=params, name='transit',
+                                          fmt='r--', log=log, time=time,
+                                          time_units=time_units,
+                                          freenames=freenames,
+                                          longparamlist=lc_model.longparamlist,
+                                          nchannel=chanrng,
+                                          nchannel_fitted=nchannel_fitted,
+                                          fitted_channels=fitted_channels,
+                                          paramtitles=paramtitles,
+                                          ld_from_S4=meta.use_generate_ld,
+                                          ld_from_file=meta.ld_file,
+                                          ld_coeffs=ldcoeffs,
+                                          recenter_ld_prior=meta.recenter_ld_prior, 
+                                          multwhite=lc_model.multwhite,
+                                          nints=lc_model.nints,
+                                          num_planets=meta.num_planets)
+        modellist.append(s_transit)        
     if 'poet_tr' in meta.run_myfuncs:
         t_poet_tr = m.PoetTransitModel(parameters=params, name='poet_tr',
                                        fmt='r--', log=log, time=time,

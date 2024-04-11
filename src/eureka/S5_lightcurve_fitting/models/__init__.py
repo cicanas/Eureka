@@ -11,3 +11,5 @@ from .PoetModels import PoetTransitModel, PoetEclipseModel, PoetPCModel
 from .PolynomialModel import PolynomialModel
 from .SinusoidPhaseCurve import SinusoidPhaseCurveModel
 from .StepModel import StepModel
+from .SpotrodModel import SpotrodTransitModel
+from . import Slowspotrod
