@@ -140,6 +140,14 @@ class PlanetParams():
             if model.parameters.dict[item0][1] == 'free':
                 item0 += self.channel_id
             setattr(self, 'a', model.parameters.dict[item0][0])
+        # Allow for sampling from a unit disk
+        if ('sesinw' in model.parameters.dict.keys()) and ('secosw' in model.parameters.dict.keys()):
+            item0 = 'secosw' + self.pid_id
+            item1 = 'sesinw' + self.pid_id
+            eccval = model.parameters.dict[item0][0]**2 + model.parameters.dict[item1][0]**2
+            omegaval = np.arctan2(model.parameters.dict[item1][0],model.parameters.dict[item0][0])*180./np.pi
+            self.ecc = eccval
+            self.w = omegaval
         # Set stellar radius
         if 'Rs' in model.parameters.dict.keys():
             item0 = 'Rs'
