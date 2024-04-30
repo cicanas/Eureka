@@ -69,7 +69,7 @@ def binned_lightcurve(meta, log, lc, i, white=False):
                          f"MAD = {np.round(mad).astype(int)} ppm",
                          transform=ax.transAxes, color=f'C{p}')
     else:
-        plt.errorbar(lc.time.values-time_modifier, norm_lcdata, norm_lcerr,
+        plt.errorbar(lc.time.values-time_modifier, norm_lcdata, np.abs(norm_lcerr),
                      fmt='o', color=f'C{i}', mec=f'C{i}', alpha=0.2)
         mad = util.get_mad_1d(norm_lcdata)
         meta.mad_s4_binned.append(mad)
