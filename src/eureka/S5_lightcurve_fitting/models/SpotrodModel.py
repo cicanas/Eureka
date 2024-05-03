@@ -4,7 +4,6 @@ import inspect
 import os
 import batman
 try:
-    os.sys.path.append(os.getenv('spotrodloc'))
     from pyspotrod import pyspotrod as spotrod    
     print("Using C version of spotrod.")
 except ImportError:
