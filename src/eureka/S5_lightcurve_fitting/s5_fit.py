@@ -19,7 +19,7 @@ except:
     dm = None
 
 
-def fitlc(eventlabel, ecf_path=None, s4_meta=None, input_meta=None, channelnum = None, maxqueuejobs = 100):
+def fitlc(eventlabel, ecf_path=None, s4_meta=None, input_meta=None, channelnum = None, maxqueuejobs = 100, lch5file = None):
     '''Fits 1D spectra with various models and fitters.
 
     Parameters
@@ -178,7 +178,10 @@ if ((10#$channel < mymax)) ; then sbatch --job-name=jwstch$((10#$channel+100)) -
             # Load in the S4 metadata used for this particular aperture pair
             meta = load_specific_s4_meta_info(meta)
             filename_S4_hold = meta.filename_S4_LCData.split(os.sep)[-1]
-            lc = xrio.readXR(meta.inputdir+os.sep+filename_S4_hold)
+            if lch5file is None:
+                lc = xrio.readXR(meta.inputdir+os.sep+filename_S4_hold)
+            else:
+                lc = lch5file
 
             # Get the number of integrations in this lightcurve so
             # that we know how to split the flattened arrays
