@@ -32,7 +32,7 @@ from ..lib import clipping
 from ..version import version
 
 
-def genlc(eventlabel, ecf_path=None, s3_meta=None, input_meta=None):
+def genlc(eventlabel, ecf_path=None, s3_meta=None, input_meta=None, h5file = None):
     '''Compute photometric flux over specified range of wavelengths.
 
     Parameters
@@ -158,7 +158,10 @@ def genlc(eventlabel, ecf_path=None, s3_meta=None, input_meta=None):
                 meta.filename_S3_SpecData.split(os.path.sep)[-1])
             log.writelog(f"Loading S3 save file:\n{specData_savefile}",
                          mute=(not meta.verbose))
-            spec = xrio.readXR(specData_savefile)
+            if h5file is None:
+                spec = xrio.readXR(specData_savefile)
+            else:
+                spec = h5file
 
             wave_1d = spec.wave_1d.values
             if meta.wave_min is None:
