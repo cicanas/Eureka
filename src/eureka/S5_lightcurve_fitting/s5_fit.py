@@ -19,7 +19,7 @@ except:
     dm = None
 
 
-def fitlc(eventlabel, ecf_path=None, s4_meta=None, input_meta=None, channelnum = None, maxqueuejobs = 100, h5file = None):
+def fitlc(eventlabel, ecf_path=None, s4_meta=None, input_meta=None, channelnum = None, maxqueuejobs = 100, h5file = None, carnegie = False):
     '''Fits 1D spectra with various models and fitters.
 
     Parameters
@@ -119,7 +119,8 @@ def fitlc(eventlabel, ecf_path=None, s4_meta=None, input_meta=None, channelnum =
         meta.run_s5 = None
     elif channelnum <0:
         ## Request 1 processor on 1 node with 4 GB physical memory and at most 10 hour walltime
-        template = '''#!/bin/bash
+        if not carnegie:
+            template = '''#!/bin/bash
 #SBATCH --mail-type=NONE                 ## Mail events (NONE, BEGIN, END, FAIL, ALL)
 #SBATCH --ntasks=1                       ## CPUs needed
 #SBATCH --mem-per-cpu=8G                 ## Memory per CPU
@@ -134,10 +135,35 @@ python batch.py $channel
 #Iteratively new job
 if ((10#$channel < mymax)) ; then sbatch --job-name=jwstch$((10#$channel+100)) --export=channel=$((10#$channel+100)) batch.pbs ; fi
 '''
+        else:
+            template = '''#!/bin/bash
+#SBATCH --mail-type=NONE                 ## Mail events (NONE, BEGIN, END, FAIL, ALL)
+#SBATCH --ntasks=1                       ## CPUs needed
+#SBATCH --mem-per-cpu=8G                 ## Memory per CPU
+#SBATCH --time=20:00:00                  ## Max walltime allowed on open allocation
+#SBATCH --output %x.o%j                  ## Output filename
+#SBATCH --error %x.o%j                   ## Error filename
+#SBATCH --exclude=memex-2018-[001-012]   ## Exclude nodes to let others do work
+
+module load conda
+conda activate /home/skanodia/conda_env/webbred
+
+python batch.py $channel
+#Iteratively new job
+if ((10#$channel < mymax)) ; then sbatch --job-name=jwstch$((10#$channel+100)) --export=channel=$((10#$channel+100)) batch.pbs ; fi
+'''
         with open('batch.pbs', "w") as text_file:
             text_file.write(template.replace('mymax','{:0.0f}'.format(chanrng - maxqueuejobs)).replace('+100','+{:0.0f}'.format(maxqueuejobs)))
         #Now we make the script for all fits files
         temp = (np.array2string(np.arange(chanrng),max_line_width=999999,formatter={'int':'{0:03}'.format})[1:-1]).split()
+        if channelnum == -2:
+            done = np.sort(np.vstack(np.char.array(glob('Stage5/*/*/*h5')).replace('.h5','').split('ch'))[:,-1])
+            temp = np.array(temp)[~np.isin(temp,done)]        
+        if channelnum == -3:
+            import pandas as pd
+            done = np.sort(np.vstack(np.char.array(glob('Stage5/*/*/*h5')).replace('.h5','').split('ch'))[:,-1])
+            temp = np.array(temp)[~np.isin(temp,done)]
+            temp = temp[~pd.Series(np.mod(temp.astype(int),maxqueuejobs),name='val').duplicated(keep='first').values]
         toexport = ('sbatch --job-name=jwstch' + np.char.array(temp).astype(str) + " --export=channel="+np.char.array(temp).astype(str)+" batch.pbs").astype('<U150')
         toexport[1:] = toexport[1:].replace('--export','--begin=now+6minutes --export')
         #Save a series of scripts that go up to 200 jobs (limit of QOSMaxJobsPerUserLimit)
