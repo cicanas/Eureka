@@ -350,8 +350,11 @@ class SpotrodTransitModel(Model):
                 if np.isnan(self.spotx).all() & np.isnan(self.spoty).all():
                     # Convert latitude and longitude to x/y if specified, assumed latitude is going from -90 to 90 degrees
                     if np.isnan(self.spotu).all() & np.isnan(self.spotv).all():
-                        self.spotx = np.cos(self.spotlon * np.pi/180) * np.sin((90-self.spotlat) * np.pi/180)
-                        self.spoty = np.sin(self.spotlon * np.pi/180) * np.sin((90-self.spotlat) * np.pi/180)
+                        tempx = np.cos(self.spotlon * np.pi/180) * np.sin((90-self.spotlat) * np.pi/180)
+                        tempy = np.sin(self.spotlon * np.pi/180) * np.sin((90-self.spotlat) * np.pi/180)
+                        # Need to shift to the coordinate frame of Fleck where x -> observer
+                        self.spotx = tempy
+                        self.spoty = np.sign(self.spotlat)*np.sqrt(1-tempx**2 - tempy**2)
                     else:
                         self.spotx = np.sqrt(self.spotu) * np.cos(2*np.pi*self.spotv)
                         self.spoty = np.sqrt(self.spotu) * np.sin(2*np.pi*self.spotv)
