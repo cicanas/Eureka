@@ -494,16 +494,20 @@ def parse_unshared_saves(meta, log, fit_methods):
     for channel in range(meta.nspecchan):
         ch_number = str(channel).zfill(len(str(meta.nspecchan)))
         channel_key = f'ch{ch_number}'
-        meta = parse_s5_saves(meta, log, fit_methods, channel_key)
-        if meta.spectrum_median is None:
-            # Parameter wasn't found, so don't keep looking for it
-            meta.spectrum_median = np.array([None for _ in
-                                             range(meta.nspecchan)])
-            meta.spectrum_err = np.array([None for _ in range(meta.nspecchan)])
-            return meta
-        spectrum_median.extend(meta.spectrum_median)
-        spectrum_err.extend(meta.spectrum_err.T)
-
+        try:
+            meta = parse_s5_saves(meta, log, fit_methods, channel_key)
+            if meta.spectrum_median is None:
+                # Parameter wasn't found, so don't keep looking for it
+                meta.spectrum_median = np.array([None for _ in
+                                                range(meta.nspecchan)])
+                meta.spectrum_err = np.array([None for _ in range(meta.nspecchan)])
+                return meta
+            spectrum_median.extend(meta.spectrum_median)
+            spectrum_err.extend(meta.spectrum_err.T)
+        except:
+            print('No data for {}'.format(channel_key))
+            spectrum_median.extend([0])
+            spectrum_err.extend(np.atleast_2d([0]*2))    
     meta.spectrum_median = np.array(spectrum_median)
     meta.spectrum_err = np.array(spectrum_err).T
 
