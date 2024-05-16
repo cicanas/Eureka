@@ -325,6 +325,7 @@ class SpotrodTransitModel(Model):
                         nspots += 1
                     elif 'spotu' in split_key[0]:
                         # For sampling on a unit disk
+                        sampletype = 'unitdisk'
                         self.spotu[chan, int(split_key[0][5:])] = \
                             np.array([self.parameters.dict[key][0]])
                     elif 'spotv' in split_key[0]:
@@ -336,6 +337,7 @@ class SpotrodTransitModel(Model):
                         spot_contrast = self.parameters.dict[key][0]
                     elif 'x' in split_key[0]:
                         # Get the spot x position
+                        sampletype = 'xy'
                         self.spotx[chan, int(split_key[0][5:])] = \
                             np.array([self.parameters.dict[key][0]])
                     elif 'y' in split_key[0]:
@@ -343,6 +345,7 @@ class SpotrodTransitModel(Model):
                         self.spoty[chan, int(split_key[0][5:])] = \
                             np.array([self.parameters.dict[key][0]])
                     elif 'lat' in split_key[0]:
+                        sampletype = 'latlon'
                         # Get the spot lat and update self.spotlat
                         self.spotlat[chan, int(split_key[0][7:])] = \
                             np.array([self.parameters.dict[key][0]])
@@ -350,9 +353,6 @@ class SpotrodTransitModel(Model):
                         # Get the spot lon and update self.spotlon
                         self.spotlon[chan, int(split_key[0][7:])] = \
                             np.array([self.parameters.dict[key][0]])             
-                    elif 'sample' in split_key[0]:
-                        # Determine how we will sample/calculate x/y
-                        sampletype = self.parameters.dict[key][0]        
                     else:
                         # it's the number of points to evaluate
                         nrings = self.parameters.dict[key][0]
