@@ -334,6 +334,14 @@ class SpotrodTransitModel(Model):
                     elif 'con' in split_key[0]:
                         # Get the spot constrast and assign
                         spot_contrast = self.parameters.dict[key][0]
+                    elif 'x' in split_key[0]:
+                        # Get the spot x position
+                        self.spotx[chan, int(split_key[0][5:])] = \
+                            np.array([self.parameters.dict[key][0]])
+                    elif 'y' in split_key[0]:
+                        # Get the spot y position
+                        self.spoty[chan, int(split_key[0][5:])] = \
+                            np.array([self.parameters.dict[key][0]])
                     elif 'lat' in split_key[0]:
                         # Get the spot lat and update self.spotlat
                         self.spotlat[chan, int(split_key[0][7:])] = \
@@ -341,23 +349,24 @@ class SpotrodTransitModel(Model):
                     elif 'lon' in split_key[0]:
                         # Get the spot lon and update self.spotlon
                         self.spotlon[chan, int(split_key[0][7:])] = \
-                            np.array([self.parameters.dict[key][0]])                    
+                            np.array([self.parameters.dict[key][0]])             
+                    elif 'sample' in split_key[0]:
+                        # Determine how we will sample/calculate x/y
+                        sampletype = self.parameters.dict[key][0]        
                     else:
                         # it's the number of points to evaluate
                         nrings = self.parameters.dict[key][0]
                 
-                # Calculate the spot x/y values
-                if np.isnan(self.spotx).all() & np.isnan(self.spoty).all():
-                    # Convert latitude and longitude to x/y if specified, assumed latitude is going from -90 to 90 degrees
-                    if np.isnan(self.spotu).all() & np.isnan(self.spotv).all():
-                        tempx = np.cos(self.spotlon * np.pi/180) * np.sin((90-self.spotlat) * np.pi/180)
-                        tempy = np.sin(self.spotlon * np.pi/180) * np.sin((90-self.spotlat) * np.pi/180)
-                        # Need to shift to the coordinate frame of Fleck where x -> observer
-                        self.spotx = tempy
-                        self.spoty = np.sign(self.spotlat)*np.sqrt(1-tempx**2 - tempy**2)
-                    else:
-                        self.spotx = np.sqrt(self.spotu) * np.cos(2*np.pi*self.spotv)
-                        self.spoty = np.sqrt(self.spotu) * np.sin(2*np.pi*self.spotv)
+                # Sample in latitude and longitude OR in a unit disk and convert to x/y, assumed latitude is going from -90 to 90 degrees
+                if (sampletype == 'latlon'):
+                    tempx = np.cos(self.spotlon * np.pi/180) * np.sin((90-self.spotlat) * np.pi/180)
+                    tempy = np.sin(self.spotlon * np.pi/180) * np.sin((90-self.spotlat) * np.pi/180)
+                    # Need to shift to the coordinate frame of Fleck where x -> observer
+                    self.spotx = tempy
+                    self.spoty = np.sign(self.spotlat)*np.sqrt(1-tempx**2 - tempy**2)
+                elif (sampletype == 'unitdisk'):
+                    self.spotx = np.sqrt(self.spotu) * np.cos(2*np.pi*self.spotv)
+                    self.spoty = np.sqrt(self.spotu) * np.sin(2*np.pi*self.spotv)
                 # Weights: 2.0 times limb darkening times width of integration annulii.
                 rrings = np.linspace(1.0/(2*nrings), 1.0-1.0/(2*nrings), nrings)
                 weights = 2.0 * limbdarkening(rrings, pl_params.u, pl_params.limb_dark) / nrings
