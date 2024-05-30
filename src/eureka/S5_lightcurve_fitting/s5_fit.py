@@ -546,16 +546,16 @@ if ((10#$channel < mymax)) ; then sbatch --job-name=jwstch$((10#$channel+100)) -
 
                     # Get the flux and error measurements for
                     # the current channel
-                    if not hasattr(meta,'whitefit'):
-                        mask = lc.mask.values[channel, :]
-                        flux = np.ma.masked_where(mask,
-                                                lc.data.values[channel, :])
-                        flux_err = np.ma.masked_where(mask,
-                                                    lc.err.values[channel, :])
-                    else:
-                        mask = lc.mask_white.values
-                        flux = np.ma.masked_where(mask, lc.flux_white.values)
-                        flux_err = np.ma.masked_where(mask, lc.err_white.values)
+                    mask = lc.mask.values[channel, :]
+                    flux = np.ma.masked_where(mask,
+                                            lc.data.values[channel, :])
+                    flux_err = np.ma.masked_where(mask,
+                                                lc.err.values[channel, :])
+                    if hasattr(meta,'whitefit'):
+                        if meta.whitefit:
+                            mask = lc.mask_white.values
+                            flux = np.ma.masked_where(mask, lc.flux_white.values)
+                            flux_err = np.ma.masked_where(mask, lc.err_white.values)
                     time_temp = np.ma.masked_where(mask, time)
 
                     # Normalize flux and uncertainties to avoid large
