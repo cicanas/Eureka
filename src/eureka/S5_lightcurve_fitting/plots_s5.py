@@ -343,9 +343,9 @@ def plot_rms(lc, model, meta, fitter):
     model_eval = model.eval(incl_GP=True)
 
     for channel in lc.fitted_channels:
-        if 'mc3.stats' not in sys.modules:
+        #if 'mc3.stats' not in sys.modules:
             # If MC3 failed to load, exit for loop
-            break
+        #    break
         flux = np.ma.copy(lc.flux)
         model_lc = np.ma.copy(model_eval)
 
