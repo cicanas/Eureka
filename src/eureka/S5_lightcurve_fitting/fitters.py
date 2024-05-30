@@ -825,6 +825,15 @@ def dynestyfitter(lc, model, meta, log, **kwargs):
                             ptform_args=[prior1, prior2, priortype])
     sampler.run_nested(dlogz=tol, print_progress=True)  # output progress bar
     res = sampler.results  # get results dictionary from sampler
+    #Print the loglikelihood and the parameters here, courtesy of JLR
+    log_likelihoods = res.logl
+    sam = res.samples
+    max_ll_index = np.argmax(log_likelihoods)
+    max_ll_params = sam[max_ll_index]
+    print(f"Maximum log-likelihood: {log_likelihoods[max_ll_index]}")
+    print(f"Parameters at maximum log-likelihood: {max_ll_params}")
+    log.writelog(f"Maximum log-likelihood: {log_likelihoods[max_ll_index]}")
+    log.writelog(f"Parameters at maximum log-likelihood: {max_ll_params}")
     if meta.ncpu > 1:
         pool.close()
         pool.join()
