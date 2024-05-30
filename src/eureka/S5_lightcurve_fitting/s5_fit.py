@@ -104,7 +104,10 @@ def fitlc(eventlabel, ecf_path=None, s4_meta=None, input_meta=None, channelnum =
         meta.spec_hw_range = [meta.spec_hw, ]
         meta.bg_hw_range = [meta.bg_hw, ]
 
-    if meta.testing_S5:
+    if hasattr(meta,'whitep'):
+        # Only fit the white light curve, need to pass whitep in the S5 config file
+        chanrng = 0        
+    elif meta.testing_S5:
         # Only fit a single channel while testing unless doing a shared fit,
         # then do two
         chanrng = 1
@@ -368,6 +371,16 @@ if ((10#$channel < mymax)) ; then sbatch --job-name=jwstch$((10#$channel+100)) -
                 flux, flux_err = util.normalize_spectrum(
                     meta, flux, flux_err, scandir=getattr(lc, 'scandir', None))
 
+                # Bind data as needed
+                if hasattr(meta,'binwhite'):                    
+                    import lightkurve
+                    from astropy import units
+                    lkobj = lightkurve.LightCurve(time=time[~flux.mask],flux=flux[~flux.mask].data,flux_err=flux_err[~flux.mask].data)
+                    binned = lkobj.bin(time_bin_size = meta.binwhite * units.s)
+                    time = binned.time[~np.isnan(binned.flux.value)].value
+                    flux = binned.flux[~np.isnan(binned.flux.value)].value
+                    flux_err = binned.flux_err[~np.isnan(binned.flux.value)].value
+
                 meta, params = fit_channel(meta, time, flux, 0, flux_err,
                                            eventlabel, params, log,
                                            longparamlist, time_units,
@@ -617,7 +630,7 @@ def fit_channel(meta, time, flux, chan, flux_err, eventlabel, params,
                                      unc=flux_err, time_units=time_units,
                                      name=eventlabel, share=meta.sharedp,
                                      white=white, multwhite=meta.multwhite,
-                                     nints=meta.nints)
+                                     nints=[len(time)] if white else meta.nints)
 
     nchannel_fitted = lc_model.nchannel_fitted
     fitted_channels = lc_model.fitted_channels
@@ -680,7 +693,7 @@ def fit_channel(meta, time, flux, chan, flux_err, eventlabel, params,
                                   recenter_ld_prior=meta.recenter_ld_prior,
                                   compute_ltt=meta.compute_ltt,
                                   multwhite=lc_model.multwhite,
-                                  nints=lc_model.nints)
+                                  nints=[len(time)] if white else meta.nints)
         modellist.append(t_starry)
         meta.ydeg = t_starry.ydeg
     if 'batman_tr' in meta.run_myfuncs:
@@ -699,7 +712,7 @@ def fit_channel(meta, time, flux, chan, flux_err, eventlabel, params,
                                          recenter_ld_prior=meta.recenter_ld_prior,  # noqa: E501
                                          compute_ltt=meta.compute_ltt,
                                          multwhite=lc_model.multwhite,
-                                         nints=lc_model.nints,
+                                         nints=[len(time)] if white else meta.nints,
                                          num_planets=meta.num_planets)
         modellist.append(t_transit)
     if 'batman_ecl' in meta.run_myfuncs:
@@ -714,7 +727,7 @@ def fit_channel(meta, time, flux, chan, flux_err, eventlabel, params,
                                          paramtitles=paramtitles,
                                          compute_ltt=meta.compute_ltt,
                                          multwhite=lc_model.multwhite,
-                                         nints=lc_model.nints,
+                                         nints=[len(time)] if white else meta.nints,
                                          num_planets=meta.num_planets)
         modellist.append(t_eclipse)
     if 'spotrod' in meta.run_myfuncs:
@@ -732,7 +745,7 @@ def fit_channel(meta, time, flux, chan, flux_err, eventlabel, params,
                                           ld_coeffs=ldcoeffs,
                                           recenter_ld_prior=meta.recenter_ld_prior, 
                                           multwhite=lc_model.multwhite,
-                                          nints=lc_model.nints,
+                                          nints=[len(time)] if white else meta.nints,
                                           num_planets=meta.num_planets)
         modellist.append(s_transit)        
     if 'poet_tr' in meta.run_myfuncs:
@@ -751,7 +764,7 @@ def fit_channel(meta, time, flux, chan, flux_err, eventlabel, params,
                                        recenter_ld_prior=meta.recenter_ld_prior,  # noqa: E501
                                        compute_ltt=meta.compute_ltt,
                                        multwhite=lc_model.multwhite,
-                                       nints=lc_model.nints,
+                                       nints=[len(time)] if white else meta.nints,
                                        num_planets=meta.num_planets)
         modellist.append(t_poet_tr)
     if 'poet_ecl' in meta.run_myfuncs:
@@ -766,7 +779,7 @@ def fit_channel(meta, time, flux, chan, flux_err, eventlabel, params,
                                         paramtitles=paramtitles,
                                         compute_ltt=meta.compute_ltt,
                                         multwhite=lc_model.multwhite,
-                                        nints=lc_model.nints,
+                                        nints=[len(time)] if white else meta.nints,
                                         num_planets=meta.num_planets)
         modellist.append(t_poet_ecl)
     if 'poet_pc' in meta.run_myfuncs:
@@ -797,7 +810,7 @@ def fit_channel(meta, time, flux, chan, flux_err, eventlabel, params,
                                   transit_model=t_model,
                                   eclipse_model=e_model,
                                   multwhite=lc_model.multwhite,
-                                  nints=lc_model.nints,
+                                  nints=[len(time)] if white else meta.nints,
                                   num_planets=meta.num_planets)
         modellist.append(t_poet_pc)
     if 'sinusoid_pc' in meta.run_myfuncs and 'starry' in meta.run_myfuncs:
@@ -816,7 +829,7 @@ def fit_channel(meta, time, flux, chan, flux_err, eventlabel, params,
                                        fitted_channels=fitted_channels,
                                        paramtitles=paramtitles,
                                        multwhite=lc_model.multwhite,
-                                       nints=lc_model.nints,
+                                       nints=[len(time)] if white else meta.nints,
                                        num_planets=meta.num_planets)
         modellist.append(t_phase)
     elif 'sinusoid_pc' in meta.run_myfuncs:
@@ -850,7 +863,7 @@ def fit_channel(meta, time, flux, chan, flux_err, eventlabel, params,
                                       transit_model=t_model,
                                       eclipse_model=e_model,
                                       multwhite=lc_model.multwhite,
-                                      nints=lc_model.nints,
+                                      nints=[len(time)] if white else meta.nints,
                                       num_planets=meta.num_planets)
         modellist.append(t_phase)
     if 'damped_osc' in meta.run_myfuncs:
@@ -864,7 +877,7 @@ def fit_channel(meta, time, flux, chan, flux_err, eventlabel, params,
                                         fitted_channels=fitted_channels,
                                         paramtitles=paramtitles,
                                         multwhite=lc_model.multwhite,
-                                        nints=lc_model.nints)
+                                        nints=[len(time)] if white else meta.nints)
         modellist.append(t_osc)
     if 'lorentzian' in meta.run_myfuncs:
         t_lorentzian = m.LorentzianModel(parameters=params, 
@@ -878,7 +891,7 @@ def fit_channel(meta, time, flux, chan, flux_err, eventlabel, params,
                                          fitted_channels=fitted_channels,
                                          paramtitles=paramtitles,
                                          multwhite=lc_model.multwhite,
-                                         nints=lc_model.nints)
+                                         nints=[len(time)] if white else meta.nints)
         modellist.append(t_lorentzian)
     if 'polynomial' in meta.run_myfuncs:
         if 'starry' in meta.run_myfuncs:
@@ -895,7 +908,7 @@ def fit_channel(meta, time, flux, chan, flux_err, eventlabel, params,
                                     fitted_channels=fitted_channels,
                                     paramtitles=paramtitles,
                                     multwhite=lc_model.multwhite,
-                                    nints=lc_model.nints)
+                                    nints=[len(time)] if white else meta.nints)
         modellist.append(t_polynom)
     if 'step' in meta.run_myfuncs:
         if 'starry' in meta.run_myfuncs:
@@ -911,7 +924,7 @@ def fit_channel(meta, time, flux, chan, flux_err, eventlabel, params,
                            fitted_channels=fitted_channels,
                            paramtitles=paramtitles,
                            multwhite=lc_model.multwhite,
-                           nints=lc_model.nints)
+                           nints=[len(time)] if white else meta.nints)
         modellist.append(t_step)
     if 'expramp' in meta.run_myfuncs:
         if 'starry' in meta.run_myfuncs:
@@ -927,7 +940,7 @@ def fit_channel(meta, time, flux, chan, flux_err, eventlabel, params,
                                  fitted_channels=fitted_channels,
                                  paramtitles=paramtitles,
                                  multwhite=lc_model.multwhite,
-                                 nints=lc_model.nints)
+                                 nints=[len(time)] if white else meta.nints)
         modellist.append(t_expramp)
     if 'hstramp' in meta.run_myfuncs:
         if 'starry' in meta.run_myfuncs:
@@ -943,7 +956,7 @@ def fit_channel(meta, time, flux, chan, flux_err, eventlabel, params,
                                  fitted_channels=fitted_channels,
                                  paramtitles=paramtitles,
                                  multwhite=lc_model.multwhite,
-                                 nints=lc_model.nints)
+                                 nints=[len(time)] if white else meta.nints)
         modellist.append(t_hstramp)
     if 'xpos' in meta.run_myfuncs:
         if 'starry' in meta.run_myfuncs:
@@ -960,7 +973,7 @@ def fit_channel(meta, time, flux, chan, flux_err, eventlabel, params,
                                paramtitles=paramtitles,
                                axis='xpos', centroid=xpos,
                                multwhite=lc_model.multwhite,
-                               nints=lc_model.nints)
+                               nints=[len(time)] if white else meta.nints)
         modellist.append(t_cent)
     if 'xwidth' in meta.run_myfuncs:
         if 'starry' in meta.run_myfuncs:
@@ -977,7 +990,7 @@ def fit_channel(meta, time, flux, chan, flux_err, eventlabel, params,
                                paramtitles=paramtitles,
                                axis='xwidth', centroid=xwidth,
                                multwhite=lc_model.multwhite,
-                               nints=lc_model.nints)
+                               nints=[len(time)] if white else meta.nints)
         modellist.append(t_cent)
     if 'ypos' in meta.run_myfuncs:
         if 'starry' in meta.run_myfuncs:
@@ -994,7 +1007,7 @@ def fit_channel(meta, time, flux, chan, flux_err, eventlabel, params,
                                paramtitles=paramtitles,
                                axis='ypos', centroid=ypos,
                                multwhite=lc_model.multwhite,
-                               nints=lc_model.nints)
+                               nints=[len(time)] if white else meta.nints)
         modellist.append(t_cent)
     if 'ywidth' in meta.run_myfuncs:
         if 'starry' in meta.run_myfuncs:
@@ -1011,7 +1024,7 @@ def fit_channel(meta, time, flux, chan, flux_err, eventlabel, params,
                                paramtitles=paramtitles,
                                axis='ywidth', centroid=ywidth,
                                multwhite=lc_model.multwhite,
-                               nints=lc_model.nints)
+                               nints=[len(time)] if white else meta.nints)
         modellist.append(t_cent)
     if 'GP' in meta.run_myfuncs:
         if not hasattr(meta, 'useHODLR'):
@@ -1032,7 +1045,7 @@ def fit_channel(meta, time, flux, chan, flux_err, eventlabel, params,
                        fitted_channels=fitted_channels,
                        paramtitles=paramtitles,
                        multwhite=lc_model.multwhite,
-                       nints=lc_model.nints)
+                       nints=[len(time)] if white else meta.nints)
         modellist.append(t_GP)
 
     if 'starry' in meta.run_myfuncs:
@@ -1047,14 +1060,14 @@ def fit_channel(meta, time, flux, chan, flux_err, eventlabel, params,
                                        fitted_channels=fitted_channels,
                                        paramtitles=paramtitles,
                                        multwhite=lc_model.multwhite,
-                                       nints=lc_model.nints)
+                                       nints=[len(time)] if white else meta.nints)
     else:
         model = m.CompositeModel(modellist, parameters=params, time=time,
                                  nchannel=chanrng,
                                  nchannel_fitted=nchannel_fitted,
                                  fitted_channels=fitted_channels,
                                  multwhite=lc_model.multwhite,
-                                 nints=lc_model.nints)
+                                 nints=[len(time)] if white else meta.nints)
 
     # Fit the models using one or more fitters
     log.writelog("=========================")
