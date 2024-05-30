@@ -104,10 +104,7 @@ def fitlc(eventlabel, ecf_path=None, s4_meta=None, input_meta=None, channelnum =
         meta.spec_hw_range = [meta.spec_hw, ]
         meta.bg_hw_range = [meta.bg_hw, ]
 
-    if hasattr(meta,'whitep'):
-        # Only fit the white light curve, need to pass whitep in the S5 config file
-        chanrng = 0        
-    elif meta.testing_S5:
+    if meta.testing_S5:
         # Only fit a single channel while testing unless doing a shared fit,
         # then do two
         chanrng = 1
@@ -549,11 +546,16 @@ if ((10#$channel < mymax)) ; then sbatch --job-name=jwstch$((10#$channel+100)) -
 
                     # Get the flux and error measurements for
                     # the current channel
-                    mask = lc.mask.values[channel, :]
-                    flux = np.ma.masked_where(mask,
-                                              lc.data.values[channel, :])
-                    flux_err = np.ma.masked_where(mask,
-                                                  lc.err.values[channel, :])
+                    if not hasattr(meta,'whitefit'):
+                        mask = lc.mask.values[channel, :]
+                        flux = np.ma.masked_where(mask,
+                                                lc.data.values[channel, :])
+                        flux_err = np.ma.masked_where(mask,
+                                                    lc.err.values[channel, :])
+                    else:
+                        mask = lc.mask_white.values
+                        flux = np.ma.masked_where(mask, lc.flux_white.values)
+                        flux_err = np.ma.masked_where(mask, lc.err_white.values)
                     time_temp = np.ma.masked_where(mask, time)
 
                     # Normalize flux and uncertainties to avoid large
