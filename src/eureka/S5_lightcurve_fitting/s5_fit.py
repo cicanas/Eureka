@@ -551,13 +551,19 @@ if ((10#$channel < mymax)) ; then sbatch --job-name=jwstch$((10#$channel+100)) -
                                             lc.data.values[channel, :])
                     flux_err = np.ma.masked_where(mask,
                                                 lc.err.values[channel, :])
+                    time_temp = np.ma.masked_where(mask, time)
+
+                    ## If you want to do a white light curve fit, read things here.
+                    ## If whitefit is not in the S5 ecf OR is false we will NOT fit a white light curve
                     if hasattr(meta,'whitefit'):
                         if meta.whitefit:
+                            fitwhite = True
                             mask = lc.mask_white.values
                             flux = np.ma.masked_where(mask, lc.flux_white.values)
                             flux_err = np.ma.masked_where(mask, lc.err_white.values)
+                            time_temp = np.ma.masked_where(mask, time)
 
-                            # Bin data as needed
+                            # If you want to bin something to XX seconds, recalculate values
                             if hasattr(meta,'binwhite'):                    
                                 import lightkurve
                                 from astropy import units
@@ -567,7 +573,8 @@ if ((10#$channel < mymax)) ; then sbatch --job-name=jwstch$((10#$channel+100)) -
                                 flux = binned.flux[~np.isnan(binned.flux.value)].value
                                 flux_err = binned.flux_err[~np.isnan(binned.flux.value)].value
                                 time_temp = np.ma.masked_where(mask, time)
-                            fitwhite = True
+                        else:
+                            fitwhite = False
                     else:
                         fitwhite = False
 
