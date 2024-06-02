@@ -70,12 +70,12 @@ class GPModel(Model):
                 raise AssertionError('Celerite2 cannot compute multi-'
                                      'dimensional GPs. Please choose a '
                                      'different GP code')
-            elif self.kernel_types[0] != 'Matern32':
-                raise AssertionError('Our celerite2 implementation currently '
-                                     'only supports a Matern32 kernel.')
+            # elif self.kernel_types[0] != 'Matern32':
+            #     raise AssertionError('Our celerite2 implementation currently '
+            #                          'only supports a Matern32 kernel.')
 
         # Update coefficients
-        self.coeffs = np.zeros((self.nchannel_fitted, self.nkernels, 2))
+        self.coeffs = np.zeros((self.nchannel_fitted, self.nkernels, 6))
         self._parse_coeffs()
 
     def _parse_coeffs(self):
@@ -92,7 +92,7 @@ class GPModel(Model):
             else:
                 chankey = f'_{chan}'
 
-            for i, par in enumerate(['A', 'm']):
+            for i, par in enumerate(['A', 'm', 'B', 'C', 'L', 'P']):
                 for k in range(self.nkernels):
                     if k == 0:
                         kernelkey = ''
@@ -326,13 +326,40 @@ class GPModel(Model):
                                      'george which includes:\nMatern32, '
                                      'ExpSquared, RationalQuadratic, Exp.')
         elif self.gp_code_name == 'celerite':
-            # get metric and amplitude for the current kernel and channel
-            amp = np.exp(self.coeffs[c, k, 0])
-            metric = np.exp(self.coeffs[c, k, 1])
+            if kernel_name == 'Matern32':
+                # get metric and amplitude for the current kernel and channel
+                amp = np.exp(self.coeffs[c, k, 0])
+                metric = np.exp(self.coeffs[c, k, 1])
 
-            kernel = celerite2.terms.Matern32Term(sigma=1, rho=metric)
-            # Setting the amplitude
-            kernel *= celerite2.terms.RealTerm(a=amp, c=0)
+                kernel = celerite2.terms.Matern32Term(sigma=1, rho=metric)
+                # Setting the amplitude
+                kernel *= celerite2.terms.RealTerm(a=amp, c=0)
+            elif kernel_name == 'ExpMat':
+                # get metric and amplitude for the current kernel and channel
+                amp = np.exp(self.coeffs[c, k, 0])
+                metric = np.exp(self.coeffs[c, k, 1])
+                L = np.exp(self.coeffs[c, k, 2+2])
+                
+                kernel = celerite2.terms.Matern32Term(sigma=1, rho=metric)
+                # Setting the amplitude
+                kernel *= celerite2.terms.RealTerm(a=amp, c=L)
+            elif kernel_name == 'QPK':
+                # get metric and amplitude for the current kernel and channel
+                # Note order of GP Vector: ln B, ln C, ln L, ln P
+                B = np.exp(self.coeffs[c, k, 0+2])
+                C = np.exp(self.coeffs[c, k, 1+2])
+                L = np.exp(self.coeffs[c, k, 2+2])
+                P = np.exp(self.coeffs[c, k, 3+2])
+
+                # Equation 56 here: https://ui.adsabs.harvard.edu/abs/2017AJ....154..220F
+                kernel = celerite2.terms.RealTerm(a = (1 + C)/(2 + C) * B, c = 1 / L)
+                kernel += celerite2.terms.ComplexTerm(a = B/(2 + C), b = 0, c = 1 / L, d = 2*np.pi / P)
+            else:
+                raise AssertionError(f'The kernel {kernel_name} is not in the '
+                                     'currently supported list of kernels for '
+                                     'celerite which includes:\nMatern32, '
+                                     'QPK, ExpMat.')
+
         elif self.gp_code_name == 'tinygp':
             # get metric and amplitude for the current kernel and channel
             amp = np.exp(self.coeffs[c, k, 0])
