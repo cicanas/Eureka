@@ -373,10 +373,24 @@ if ((10#$channel < mymax)) ; then sbatch --job-name=jwstch$((10#$channel+100)) -
                     import lightkurve
                     from astropy import units
                     lkobj = lightkurve.LightCurve(time=time[~flux.mask],flux=flux[~flux.mask].data,flux_err=flux_err[~flux.mask].data)
+                    lkobj_x = lightkurve.LightCurve(time=time[~flux.mask],flux=xpos[~flux.mask].data)
+                    lkobj_y = lightkurve.LightCurve(time=time[~flux.mask],flux=ypos[~flux.mask].data)
+                    lkobj_xwidth = lightkurve.LightCurve(time=time[~flux.mask],flux=xwidth[~flux.mask].data)
+                    lkobj_ywidth = lightkurve.LightCurve(time=time[~flux.mask],flux=ywidth[~flux.mask].data)
+
                     binned = lkobj.bin(time_bin_size = meta.binwhite * units.s)
+                    binned_x = lkobj_x.bin(time_bin_size = meta.binwhite * units.s)
+                    binned_y = lkobj_y.bin(time_bin_size = meta.binwhite * units.s)
+                    binned_xwidth = lkobj_xwidth.bin(time_bin_size = meta.binwhite * units.s)
+                    binned_ywidth = lkobj_ywidth.bin(time_bin_size = meta.binwhite * units.s)
+
                     time = binned.time[~np.isnan(binned.flux.value)].value
                     flux = binned.flux[~np.isnan(binned.flux.value)].value
                     flux_err = binned.flux_err[~np.isnan(binned.flux.value)].value
+                    xpos = binned_x.flux[~np.isnan(binned.flux.value)].value
+                    ypos = binned_y.flux[~np.isnan(binned.flux.value)].value
+                    xwidth = binned_xwidth.flux[~np.isnan(binned.flux.value)].value
+                    ywidth = binned_ywidth.flux[~np.isnan(binned.flux.value)].value
 
                 meta, params = fit_channel(meta, time, flux, 0, flux_err,
                                            eventlabel, params, log,
@@ -568,10 +582,24 @@ if ((10#$channel < mymax)) ; then sbatch --job-name=jwstch$((10#$channel+100)) -
                                 import lightkurve
                                 from astropy import units
                                 lkobj = lightkurve.LightCurve(time=time[~flux.mask],flux=flux[~flux.mask].data,flux_err=flux_err[~flux.mask].data)
+                                lkobj_x = lightkurve.LightCurve(time=time[~flux.mask],flux=xpos[~flux.mask].data)
+                                lkobj_y = lightkurve.LightCurve(time=time[~flux.mask],flux=ypos[~flux.mask].data)
+                                lkobj_xwidth = lightkurve.LightCurve(time=time[~flux.mask],flux=xwidth[~flux.mask].data)
+                                lkobj_ywidth = lightkurve.LightCurve(time=time[~flux.mask],flux=ywidth[~flux.mask].data)
+
                                 binned = lkobj.bin(time_bin_size = meta.binwhite * units.s)
+                                binned_x = lkobj_x.bin(time_bin_size = meta.binwhite * units.s)
+                                binned_y = lkobj_y.bin(time_bin_size = meta.binwhite * units.s)
+                                binned_xwidth = lkobj_xwidth.bin(time_bin_size = meta.binwhite * units.s)
+                                binned_ywidth = lkobj_ywidth.bin(time_bin_size = meta.binwhite * units.s)
+
                                 time = binned.time[~np.isnan(binned.flux.value)].value
                                 flux = binned.flux[~np.isnan(binned.flux.value)].value
                                 flux_err = binned.flux_err[~np.isnan(binned.flux.value)].value
+                                xpos = binned_x.flux[~np.isnan(binned.flux.value)].value
+                                ypos = binned_y.flux[~np.isnan(binned.flux.value)].value
+                                xwidth = binned_xwidth.flux[~np.isnan(binned.flux.value)].value
+                                ywidth = binned_ywidth.flux[~np.isnan(binned.flux.value)].value
                                 time_temp = np.ma.masked_where(mask, time)
                         else:
                             fitwhite = False
