@@ -39,7 +39,9 @@ def limbdarkening(r, u, ld_law = 'quadratic'):
     mask = (r<=1.0)
     mu = np.sqrt(1.0 - r[mask]**2)
     #See https://ui.adsabs.harvard.edu/abs/2000A&A...363.1081C/abstract
-    if ld_law != 'uniform':
+    if ld_law == 'nonlinear':
+        answer[mask] = ld_profile('4-parameter').__call__(mu,*u)
+    elif ld_law != 'uniform':
         answer[mask] = ld_profile(ld_law).__call__(mu,*u)
     else:
         answer[mask] = 1.0
@@ -318,16 +320,17 @@ class SpotrodTransitModel(Model):
                     pl_params.u = np.array([u1, u2])
                 elif self.parameters.limb_dark.value == 'kipping2015':
                     pl_params.limb_dark = 'nonlinear'
-                    u1, u2, u3 = LDC3.forward(pl_params.u)
+                    u1 = 0
+                    u2, u3, u4 = LDC3.forward(pl_params.u)
                     # Enforce physicality to avoid crashes from batman by
                     # returning something that should be a horrible fit
-                    passed = LDC3.criteriatest(0,[u1,u2,u3])
+                    passed = LDC3.criteriatest(0,[u2,u3,u4])
                     if passed != 1:
                         # Returning nans or infs breaks the fits, so this was
                         # the best I could think of
                         light_curve = 1e12*np.ma.ones(time.shape)
                         continue
-                    pl_params.u = np.array([u1, u2, u3])                    
+                    pl_params.u = np.array([u1, u2, u3, u4])                
 
                 # Set spot parameters
                 nspots = 0
