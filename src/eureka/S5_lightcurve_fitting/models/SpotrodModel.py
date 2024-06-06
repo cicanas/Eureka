@@ -15,6 +15,13 @@ from .KeplerOrbit import KeplerOrbit
 from ..limb_darkening_fit import ld_profile
 from ...lib.split_channels import split
 
+try:
+    import os
+    os.sys.path.append(os.environ['LDC3_PATH'])
+    import LDC3
+except ImportError:
+    print("Could not import LDC3. Code will break if you specify an LD law of 'kipping2015'.")
+
 
 def limbdarkening(r, u, ld_law = 'quadratic'):
     """
@@ -309,6 +316,18 @@ class SpotrodTransitModel(Model):
                     u1 = 2*np.sqrt(pl_params.u[0])*pl_params.u[1]
                     u2 = np.sqrt(pl_params.u[0])*(1-2*pl_params.u[1])
                     pl_params.u = np.array([u1, u2])
+                elif self.parameters.limb_dark.value == 'kipping2015':
+                    pl_params.limb_dark = 'nonlinear'
+                    u1, u2, u3 = LDC3.forward(pl_params.u)
+                    # Enforce physicality to avoid crashes from batman by
+                    # returning something that should be a horrible fit
+                    passed = LDC3.criteriatest(0,[u1,u2,u3])
+                    if passed != 1:
+                        # Returning nans or infs breaks the fits, so this was
+                        # the best I could think of
+                        light_curve = 1e12*np.ma.ones(time.shape)
+                        continue
+                    pl_params.u = np.array([u1, u2, u3])                    
 
                 # Set spot parameters
                 nspots = 0
