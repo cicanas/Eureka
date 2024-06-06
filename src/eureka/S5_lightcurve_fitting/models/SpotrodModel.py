@@ -39,9 +39,7 @@ def limbdarkening(r, u, ld_law = 'quadratic'):
     mask = (r<=1.0)
     mu = np.sqrt(1.0 - r[mask]**2)
     #See https://ui.adsabs.harvard.edu/abs/2000A&A...363.1081C/abstract
-    if ld_law == 'nonlinear':
-        answer[mask] = ld_profile('4-parameter').__call__(mu,*u)
-    elif ld_law != 'uniform':
+    if ld_law != 'uniform':
         answer[mask] = ld_profile(ld_law).__call__(mu,*u)
     else:
         answer[mask] = 1.0
@@ -286,6 +284,11 @@ class SpotrodTransitModel(Model):
                 # Initialize planet
                 pl_params = PlanetParams(self, pid, chan)
 
+                # Calculate true anomaly
+                pl_params.u = [0.4,0.4]
+                pl_params.limb_dark = 'quadratic'
+                trueanom = batman.TransitModel(pl_params, time, transittype='primary').get_true_anomaly()
+
                 # Set limb darkening parameters
                 uarray = []
                 for u in self.coeffs:
@@ -319,7 +322,7 @@ class SpotrodTransitModel(Model):
                     u2 = np.sqrt(pl_params.u[0])*(1-2*pl_params.u[1])
                     pl_params.u = np.array([u1, u2])
                 elif self.parameters.limb_dark.value == 'kipping2015':
-                    pl_params.limb_dark = 'nonlinear'
+                    pl_params.limb_dark = '4-parameter'
                     u1 = 0
                     u2, u3, u4 = LDC3.forward(pl_params.u)
                     # Enforce physicality to avoid crashes from batman by
@@ -393,7 +396,6 @@ class SpotrodTransitModel(Model):
                 rrings = np.linspace(1.0/(2*nrings), 1.0-1.0/(2*nrings), nrings)
                 weights = 2.0 * limbdarkening(rrings, pl_params.u, pl_params.limb_dark) / nrings
                 # Get the X-Y coordinates and projected separation from center z, see Murray & Dermott 1998 or Winn 2010           
-                trueanom = batman.TransitModel(pl_params, time, transittype='primary').get_true_anomaly()
                 planetx, planety, planetz = planet_XYZ_position(trueanom,pl_params.a,pl_params.inc*np.pi/180,pl_params.ecc,pl_params.w*np.pi/180)
                 planetangle = np.array([spotrod.circleangle(rrings, pl_params.rp, thisz) for thisz in planetz[(planetz < (1 + pl_params.rp))]])
                 # Make the transit model
