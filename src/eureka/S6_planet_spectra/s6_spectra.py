@@ -248,6 +248,8 @@ def plot_spectra(eventlabel, ecf_path=None, s5_meta=None, input_meta=None):
                         limb_law = limb_law[1:-1]
                         if limb_law == 'kipping2013':
                             limb_law = 'Kipping (2013)'
+                        elif limb_law == 'kipping2015':
+                            limb_law = 'Kipping (2015)'
                         meta.y_label += ' for '+limb_law
                     elif meta.y_param == 't0':
                         # Time of transit
