@@ -466,13 +466,13 @@ if ((10#$channel < mymax)) ; then sbatch --job-name=jwstch$((10#$channel+100)) -
                 ywidth = np.ma.masked_array([])
 
                 for pi in range(len(meta.inputdirlist)+1):
-                    mask = lc_whites[pi].mask.values[0, :]
+                    mask = lc_whites[pi].mask_white.values
                     time_temp = lc_whites[pi].time.values - offset
                     time_temp = np.ma.masked_where(mask, time_temp)
                     flux_temp = np.ma.masked_where(
-                        mask, lc_whites[pi].data.values[0, :])
+                        mask, lc_whites[pi].flux_white.values)
                     err_temp = np.ma.masked_where(
-                        mask, lc_whites[pi].err.values[0, :])
+                        mask, lc_whites[pi].err_white.values)
                     flux_temp, err_temp = util.normalize_spectrum(
                         meta, flux_temp, err_temp, mask)
                     flux = np.ma.append(flux, flux_temp)
