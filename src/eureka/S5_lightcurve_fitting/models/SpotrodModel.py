@@ -19,7 +19,7 @@ try:
     import os
     os.sys.path.append(os.environ['LDC3_PATH'])
     import LDC3
-except ImportError:
+except:
     print("Could not import LDC3. Code will break if you specify an LD law of 'kipping2015'.")
 
 
