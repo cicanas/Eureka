@@ -6,7 +6,7 @@ import batman
 try:
     from pyspotrod import pyspotrod as spotrod    
     print("Using C version of spotrod.")
-except ImportError:
+except:
     print("Using a slower python version of spotrod. Functionality may be limited.")
     from . import Slowspotrod as spotrod
 
