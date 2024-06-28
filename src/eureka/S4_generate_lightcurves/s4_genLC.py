@@ -205,6 +205,10 @@ def genlc(eventlabel, ecf_path=None, s3_meta=None, input_meta=None, h5file=None)
             if hasattr(spec, 'optspec') and not hasattr(spec, 'optmask'):
                 spec['optmask'] = (~np.isfinite(spec.optspec)).astype(int)
 
+            # Assign a mask for custom datasets, masking any NaN values
+            if hasattr(spec, 'optspec') and not hasattr(spec, 'optmask'):
+                spec['optmask'] = (~np.isfinite(spec.optspec)).astype(int)
+
             wave_1d = spec.wave_1d.values
             if meta.wave_min is None:
                 meta.wave_min = np.min(wave_1d)
