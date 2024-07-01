@@ -788,6 +788,25 @@ def fit_channel(meta, time, flux, chan, flux_err, eventlabel, params,
                                          nints=[len(time)] if white else meta.nints,
                                          num_planets=meta.num_planets)
         modellist.append(t_eclipse)
+    if 'fleck_tr' in meta.run_myfuncs:
+        t_transit = m.FleckTransitModel(parameters=params, name='transit',
+                                        fmt='r--', log=log, time=time,
+                                        time_units=time_units,
+                                        freenames=freenames,
+                                        longparamlist=lc_model.longparamlist,
+                                        nchannel=chanrng,
+                                        nchannel_fitted=nchannel_fitted,
+                                        fitted_channels=fitted_channels,
+                                        paramtitles=paramtitles,
+                                        ld_from_S4=meta.use_generate_ld,
+                                        ld_from_file=meta.ld_file,
+                                        ld_coeffs=ldcoeffs,
+                                        recenter_ld_prior=meta.recenter_ld_prior,  # noqa: E501
+                                        compute_ltt=meta.compute_ltt,
+                                        multwhite=lc_model.multwhite,
+                                        nints=[len(time)] if white else meta.nints,
+                                        num_planets=meta.num_planets)
+        modellist.append(t_transit)
     if 'spotrod' in meta.run_myfuncs:
         s_transit = m.SpotrodTransitModel(parameters=params, name='transit',
                                           fmt='r--', log=log, time=time,
