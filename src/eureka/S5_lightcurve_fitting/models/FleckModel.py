@@ -8,6 +8,13 @@ from .Model import Model
 from ..limb_darkening_fit import ld_profile
 from ...lib.split_channels import split
 
+try:
+    import os
+    os.sys.path.append(os.environ['LDC3_PATH'])
+    import LDC3
+except:
+    print("Could not import LDC3. Code will break if you specify an LD law of 'kipping2015'.")
+
 
 class PlanetParams():
     """
@@ -235,7 +242,7 @@ class FleckTransitModel(Model):
                 # set a star rotation for the star object
                 # not actually used in fast mode. 
                 # overwritten if user supplies and runs slow mode
-                star_rotation = 100 
+                star_rotation = 1e6 
                 fleck_fast = True
                 for key in self.keys:
                     split_key = key.split('_')
@@ -248,7 +255,17 @@ class FleckTransitModel(Model):
                         self.spotrad[chan, int(split_key[0][7:])] = \
                             np.array([self.parameters.dict[key][0]])
                         nspots += 1
+                    elif 'spotu' in split_key[0]:
+                        # For sampling on a unit sphere
+                        sampletype = 'unitsphere'
+                        self.spotu[chan, int(split_key[0][5:])] = \
+                            np.array([self.parameters.dict[key][0]])
+                    elif 'spotv' in split_key[0]:
+                        # For sampling on a unit disk
+                        self.spotv[chan, int(split_key[0][5:])] = \
+                            np.array([self.parameters.dict[key][0]])
                     elif 'lat' in split_key[0]:
+                        sampletype = 'latlon'
                         # Get the spot lat and update self.spotlat
                         self.spotlat[chan, int(split_key[0][7:])] = \
                             np.array([self.parameters.dict[key][0]])
@@ -269,7 +286,13 @@ class FleckTransitModel(Model):
                     elif 'npts' in split_key[0]:
                         # it's the number of points to evaluate
                         npoints = self.parameters.dict[key][0]
-            
+
+                # Sample in in unit sphere, see https://mathworld.wolfram.com/SpherePointPicking.html
+                # If you only care about the front hemisphere (fast mode) then, -0.25 <= u <= 0.25 and 0 <= v <= 1
+                if (sampletype == 'unitsphere'):
+                    self.spotlat = 90 - np.arccos(2*self.spotv-1) * 180/np.pi
+                    self.spotlon = 2*180*self.spotu
+
                 # Set limb darkening parameters
                 uarray = []
                 for u in self.coeffs:
@@ -304,21 +327,41 @@ class FleckTransitModel(Model):
                     u1 = 2*np.sqrt(pl_params.u[0])*pl_params.u[1]
                     u2 = np.sqrt(pl_params.u[0])*(1-2*pl_params.u[1])
                     pl_params.u = np.array([u1, u2])
+                elif self.parameters.limb_dark.value == 'kipping2015':
+                    pl_params.limb_dark = '4-parameter'
+                    u1 = 0
+                    u2, u3, u4 = LDC3.forward(pl_params.u)
+                    # Enforce physicality to avoid crashes from batman by
+                    # returning something that should be a horrible fit
+                    passed = LDC3.criteriatest(0,[u2,u3,u4])
+                    if passed != 1:
+                        # Returning nans or infs breaks the fits, so this was
+                        # the best I could think of
+                        light_curve = 1e12*np.ma.ones(time.shape)
+                        continue
+                    pl_params.u = np.array([u1, u2, u3, u4])
 
                 # Make the star object
                 star = fleck.Star(spot_contrast=spot_contrast, 
                                   u_ld=pl_params.u, 
                                   rotation_period=star_rotation)
                 # Make the transit model
-                fleck_times = np.linspace(time[0], time[-1], npoints)
-                fleck_transit = star.light_curve(
-                    self.spotlon[chan][:nspots, None]*unit.deg, 
-                    self.spotlat[chan][:nspots, None]*unit.deg, 
-                    self.spotrad[chan][:nspots, None],
-                    star_inc*unit.deg, 
-                    planet=pl_params, times=fleck_times).flatten()
-                m_transit = np.interp(time, fleck_times, fleck_transit)
-                
+                if npoints is not None:
+                    fleck_times = np.linspace(time[0], time[-1], npoints)
+                    fleck_transit = star.light_curve(
+                        self.spotlon[chan][:nspots, None]*unit.deg, 
+                        self.spotlat[chan][:nspots, None]*unit.deg, 
+                        self.spotrad[chan][:nspots, None],
+                        star_inc*unit.deg, 
+                        planet=pl_params, times=fleck_times).flatten()
+                    m_transit = np.interp(time, fleck_times, fleck_transit)
+                else:                
+                    m_transit = star.light_curve(
+                        self.spotlon[chan][:nspots, None]*unit.deg, 
+                        self.spotlat[chan][:nspots, None]*unit.deg, 
+                        self.spotrad[chan][:nspots, None],
+                        star_inc*unit.deg, 
+                        planet=pl_params, times=time).flatten()
                 light_curve *= m_transit/m_transit[0]
 
             lcfinal = np.append(lcfinal, light_curve)
