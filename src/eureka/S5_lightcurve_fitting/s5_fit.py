@@ -391,6 +391,7 @@ if ((10#$channel < mymax)) ; then sbatch --job-name=jwstch$((10#$channel+100)) -
                     ypos = binned_y.flux[~np.isnan(binned.flux.value)].value
                     xwidth = binned_xwidth.flux[~np.isnan(binned.flux.value)].value
                     ywidth = binned_ywidth.flux[~np.isnan(binned.flux.value)].value
+                    print('***The size of the binned data is {:0.0f}***'.format(len(flux)))
 
                 meta, params = fit_channel(meta, time, flux, 0, flux_err,
                                            eventlabel, params, log,
@@ -500,6 +501,7 @@ if ((10#$channel < mymax)) ; then sbatch --job-name=jwstch$((10#$channel+100)) -
                         ypos_temp = binned_y.flux[~np.isnan(binned.flux.value)].value
                         xwidth_temp = binned_xwidth.flux[~np.isnan(binned.flux.value)].value
                         ywidth_temp = binned_ywidth.flux[~np.isnan(binned.flux.value)].value
+                        print('***The size of the binned data is {:0.0f}***'.format(len(flux_temp)))
 
                     flux = np.ma.append(flux, flux_temp)
                     flux_err = np.ma.append(flux_err, err_temp)
@@ -608,7 +610,8 @@ if ((10#$channel < mymax)) ; then sbatch --job-name=jwstch$((10#$channel+100)) -
                             time_temp = np.ma.masked_where(mask, time)
 
                             # If you want to bin something to XX seconds, recalculate values
-                            if hasattr(meta,'binwhite'):                    
+                            if hasattr(meta,'binwhite'):  
+                                print('Binning data to {} minutes'.format(meta.binwhite * units.s.to('min')))
                                 import lightkurve
                                 from astropy import units
                                 lkobj = lightkurve.LightCurve(time=time[~flux.mask],flux=flux[~flux.mask].data,flux_err=flux_err[~flux.mask].data)
@@ -630,6 +633,7 @@ if ((10#$channel < mymax)) ; then sbatch --job-name=jwstch$((10#$channel+100)) -
                                 ypos = binned_y.flux[~np.isnan(binned.flux.value)].value
                                 xwidth = binned_xwidth.flux[~np.isnan(binned.flux.value)].value
                                 ywidth = binned_ywidth.flux[~np.isnan(binned.flux.value)].value
+                                print('***The size of the binned data is {:0.0f}***'.format(len(flux)))
                         else:
                             fitwhite = False
                     else:
