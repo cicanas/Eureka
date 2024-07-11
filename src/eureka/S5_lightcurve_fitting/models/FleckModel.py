@@ -2,7 +2,10 @@ import numpy as np
 import astropy.units as unit
 import inspect
 
-import fleck
+try:
+    import fleck
+except:
+    print("Could not import fleck. If you specify fleck as an option, this will crash.")
 
 from .Model import Model
 from ..limb_darkening_fit import ld_profile
