@@ -630,7 +630,6 @@ if ((10#$channel < mymax)) ; then sbatch --job-name=jwstch$((10#$channel+100)) -
                                 ypos = binned_y.flux[~np.isnan(binned.flux.value)].value
                                 xwidth = binned_xwidth.flux[~np.isnan(binned.flux.value)].value
                                 ywidth = binned_ywidth.flux[~np.isnan(binned.flux.value)].value
-                                time_temp = np.ma.masked_where(mask, time_temp)
                         else:
                             fitwhite = False
                     else:
