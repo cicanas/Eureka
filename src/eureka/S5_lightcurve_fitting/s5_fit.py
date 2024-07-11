@@ -480,7 +480,7 @@ if ((10#$channel < mymax)) ; then sbatch --job-name=jwstch$((10#$channel+100)) -
                     if hasattr(meta,'binwhite'):
                         import lightkurve
                         from astropy import units
-                        print('Binning data to {} minutes'.format(meta.binwhite * units.s.to('min')))
+                        print('Binning data to {} seconds'.format(meta.binwhite))
                         lkobj = lightkurve.LightCurve(time=time[~flux.mask],flux=flux[~flux.mask].data,flux_err=flux_err[~flux.mask].data)
                         lkobj_x = lightkurve.LightCurve(time=time[~flux.mask],flux=xpos[~flux.mask].data)
                         lkobj_y = lightkurve.LightCurve(time=time[~flux.mask],flux=ypos[~flux.mask].data)
@@ -613,7 +613,7 @@ if ((10#$channel < mymax)) ; then sbatch --job-name=jwstch$((10#$channel+100)) -
                             if hasattr(meta,'binwhite'):  
                                 import lightkurve
                                 from astropy import units
-                                print('Binning data to {} minutes'.format(meta.binwhite * units.s.to('min')))
+                                print('Binning data to {} seconds'.format(meta.binwhite))
                                 lkobj = lightkurve.LightCurve(time=time[~flux.mask],flux=flux[~flux.mask].data,flux_err=flux_err[~flux.mask].data)
                                 lkobj_x = lightkurve.LightCurve(time=time[~flux.mask],flux=xpos[~flux.mask].data)
                                 lkobj_y = lightkurve.LightCurve(time=time[~flux.mask],flux=ypos[~flux.mask].data)
