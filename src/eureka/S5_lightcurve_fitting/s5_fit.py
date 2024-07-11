@@ -480,27 +480,14 @@ if ((10#$channel < mymax)) ; then sbatch --job-name=jwstch$((10#$channel+100)) -
                     if hasattr(meta,'binwhite'):
                         import lightkurve
                         from astropy import units
+                        original_time_temp = np.array(time_temp,copy=True)
+                        original_flux_temp = np.array(flux_temp,copy=True)
                         print('Binning data to {} seconds'.format(meta.binwhite))
-                        lkobj = lightkurve.LightCurve(time=time[~flux.mask],flux=flux[~flux.mask].data,flux_err=flux_err[~flux.mask].data)
-                        lkobj_x = lightkurve.LightCurve(time=time[~flux.mask],flux=xpos[~flux.mask].data)
-                        lkobj_y = lightkurve.LightCurve(time=time[~flux.mask],flux=ypos[~flux.mask].data)
-                        lkobj_xwidth = lightkurve.LightCurve(time=time[~flux.mask],flux=xwidth[~flux.mask].data)
-                        lkobj_ywidth = lightkurve.LightCurve(time=time[~flux.mask],flux=ywidth[~flux.mask].data)
-
+                        lkobj = lightkurve.LightCurve(time=time_temp[~flux_temp.mask],flux=flux_temp[~flux_temp.mask].data,flux_err=err_temp[~flux_temp.mask].data)
                         binned = lkobj.bin(time_bin_size = meta.binwhite * units.s)
-                        binned_x = lkobj_x.bin(time_bin_size = meta.binwhite * units.s)
-                        binned_y = lkobj_y.bin(time_bin_size = meta.binwhite * units.s)
-                        binned_xwidth = lkobj_xwidth.bin(time_bin_size = meta.binwhite * units.s)
-                        binned_ywidth = lkobj_ywidth.bin(time_bin_size = meta.binwhite * units.s)
-
                         time_temp = binned.time[~np.isnan(binned.flux.value)].value
                         flux_temp = binned.flux[~np.isnan(binned.flux.value)].value
                         err_temp = binned.flux_err[~np.isnan(binned.flux.value)].value
-                        time_temp = np.ma.masked_where(mask, time)
-                        xpos_temp = binned_x.flux[~np.isnan(binned.flux.value)].value
-                        ypos_temp = binned_y.flux[~np.isnan(binned.flux.value)].value
-                        xwidth_temp = binned_xwidth.flux[~np.isnan(binned.flux.value)].value
-                        ywidth_temp = binned_ywidth.flux[~np.isnan(binned.flux.value)].value
                         print('***The size of the binned data is {:0.0f}***'.format(len(flux_temp)))
 
                     flux = np.ma.append(flux, flux_temp)
@@ -508,31 +495,43 @@ if ((10#$channel < mymax)) ; then sbatch --job-name=jwstch$((10#$channel+100)) -
                     time = np.ma.append(time, time_temp)
 
                     if hasattr(lc_whites[pi], 'centroid_x'):
-                        if not hasattr(meta,'binwhite'):
-                            xpos_temp = np.ma.masked_invalid(
-                                lc_whites[pi].centroid_x.values)
-                            xpos_temp = np.ma.masked_where(mask, xpos_temp)
+                        xpos_temp = np.ma.masked_invalid(
+                            lc_whites[pi].centroid_x.values)
+                        xpos_temp = np.ma.masked_where(mask, xpos_temp)
+                        if hasattr(meta,'binwhite'):
+                            lkobj_x = lightkurve.LightCurve(time=original_time_temp[~original_flux_temp.mask],flux=xpos_temp[~original_flux_temp.mask].data)
+                            binned_x = lkobj_x.bin(time_bin_size = meta.binwhite * units.s)
+                            xpos_temp = binned_x.flux[~np.isnan(binned.flux.value)].value
                     else:
                         xpos_temp = None
                     if hasattr(lc_whites[pi], 'centroid_sx'):
-                        if not hasattr(meta,'binwhite'):
-                            xwidth_temp = np.ma.masked_invalid(
-                                lc_whites[pi].centroid_sx.values)
-                            xwidth_temp = np.ma.masked_where(mask, xwidth_temp)
+                        xwidth_temp = np.ma.masked_invalid(
+                            lc_whites[pi].centroid_sx.values)
+                        xwidth_temp = np.ma.masked_where(mask, xwidth_temp)
+                        if hasattr(meta,'binwhite'):
+                            lkobj_xwidth = lightkurve.LightCurve(time=original_time_temp[~original_flux_temp.mask],flux=xwidth_temp[~original_flux_temp.mask].data)
+                            binned_xwidth = lkobj_xwidth.bin(time_bin_size = meta.binwhite * units.s)
+                            xwidth_temp = binned_xwidth.flux[~np.isnan(binned.flux.value)].value
                     else:
                         xwidth_temp = None
                     if hasattr(lc_whites[pi], 'centroid_y'):
-                        if not hasattr(meta,'binwhite'):
-                            ypos_temp = np.ma.masked_invalid(
-                                lc_whites[pi].centroid_y.values)
-                            ypos_temp = np.ma.masked_where(mask, ypos_temp)
+                        ypos_temp = np.ma.masked_invalid(
+                            lc_whites[pi].centroid_y.values)
+                        ypos_temp = np.ma.masked_where(mask, ypos_temp)
+                        if hasattr(meta,'binwhite'):
+                            lkobj_y = lightkurve.LightCurve(time=original_time_temp[~original_flux_temp.mask],flux=ypos_temp[~original_flux_temp.mask].data)
+                            binned_y = lkobj_y.bin(time_bin_size = meta.binwhite * units.s)
+                            ypos_temp = binned_y.flux[~np.isnan(binned.flux.value)].value
                     else:
                         ypos_temp = None
                     if hasattr(lc_whites[pi], 'centroid_sy'):
-                        if not hasattr(meta,'binwhite'):
-                            ywidth_temp = np.ma.masked_invalid(
-                                lc_whites[pi].centroid_sy.values)
-                            ywidth_temp = np.ma.masked_where(mask, ywidth_temp)
+                        ywidth_temp = np.ma.masked_invalid(
+                            lc_whites[pi].centroid_sy.values)
+                        ywidth_temp = np.ma.masked_where(mask, ywidth_temp)
+                        if hasattr(meta,'binwhite'):
+                            lkobj_ywidth = lightkurve.LightCurve(time=original_time_temp[~original_flux_temp.mask],flux=ywidth_temp[~original_flux_temp.mask].data)                       
+                            binned_ywidth = lkobj_ywidth.bin(time_bin_size = meta.binwhite * units.s)                      
+                            ywidth_temp = binned_ywidth.flux[~np.isnan(binned.flux.value)].value
                     else:
                         ywidth_temp = None
 
