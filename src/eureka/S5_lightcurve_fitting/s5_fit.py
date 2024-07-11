@@ -489,6 +489,7 @@ if ((10#$channel < mymax)) ; then sbatch --job-name=jwstch$((10#$channel+100)) -
                         flux_temp = binned.flux[~np.isnan(binned.flux.value)].value
                         err_temp = binned.flux_err[~np.isnan(binned.flux.value)].value
                         print('***The size of the binned data is {:0.0f}***'.format(len(flux_temp)))
+                        meta.nints[pi] = len(flux_temp)
 
                     flux = np.ma.append(flux, flux_temp)
                     flux_err = np.ma.append(flux_err, err_temp)
@@ -539,7 +540,7 @@ if ((10#$channel < mymax)) ; then sbatch --job-name=jwstch$((10#$channel+100)) -
                     ypos = np.ma.append(ypos, ypos_temp)
                     xwidth = np.ma.append(xwidth, xwidth_temp)
                     ywidth = np.ma.append(ywidth, ywidth_temp)
-
+                
                 meta, params = fit_channel(meta, time, flux, 0, flux_err,
                                            eventlabel, params, log,
                                            longparamlist, time_units,
