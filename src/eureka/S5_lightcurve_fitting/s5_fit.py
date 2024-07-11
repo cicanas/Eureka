@@ -478,9 +478,9 @@ if ((10#$channel < mymax)) ; then sbatch --job-name=jwstch$((10#$channel+100)) -
                         meta, flux_temp, err_temp, mask)
                     # If you want to bin something to XX seconds, recalculate values
                     if hasattr(meta,'binwhite'):
-                        print('Binning data to {} minutes'.format(meta.binwhite * units.s.to('min')))
                         import lightkurve
                         from astropy import units
+                        print('Binning data to {} minutes'.format(meta.binwhite * units.s.to('min')))
                         lkobj = lightkurve.LightCurve(time=time[~flux.mask],flux=flux[~flux.mask].data,flux_err=flux_err[~flux.mask].data)
                         lkobj_x = lightkurve.LightCurve(time=time[~flux.mask],flux=xpos[~flux.mask].data)
                         lkobj_y = lightkurve.LightCurve(time=time[~flux.mask],flux=ypos[~flux.mask].data)
@@ -611,9 +611,9 @@ if ((10#$channel < mymax)) ; then sbatch --job-name=jwstch$((10#$channel+100)) -
 
                             # If you want to bin something to XX seconds, recalculate values
                             if hasattr(meta,'binwhite'):  
-                                print('Binning data to {} minutes'.format(meta.binwhite * units.s.to('min')))
                                 import lightkurve
                                 from astropy import units
+                                print('Binning data to {} minutes'.format(meta.binwhite * units.s.to('min')))
                                 lkobj = lightkurve.LightCurve(time=time[~flux.mask],flux=flux[~flux.mask].data,flux_err=flux_err[~flux.mask].data)
                                 lkobj_x = lightkurve.LightCurve(time=time[~flux.mask],flux=xpos[~flux.mask].data)
                                 lkobj_y = lightkurve.LightCurve(time=time[~flux.mask],flux=ypos[~flux.mask].data)
