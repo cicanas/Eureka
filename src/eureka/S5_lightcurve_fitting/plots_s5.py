@@ -9,7 +9,10 @@ except:
     print("Could not import MC3. No Allan variance plots will be produced.")
 import corner
 from scipy import stats
-import fleck
+try:
+    import fleck
+except:
+    print("Could not import fleck. If you specify fleck as an option, this will crash.")
 import batman
 import astropy.units as unit
 try:
