@@ -160,7 +160,7 @@ def plot_spectra(eventlabel, ecf_path=None, s5_meta=None, input_meta=None):
                 physical_type = 'Wavelength'
             label_unit = x_unit.name
             if label_unit == 'um':
-                label_unit = r'$\mu$m'
+                label_unit = '\u03BCm'
             meta.xlabel = physical_type+' ('+label_unit+')'
 
             fit_methods = meta.fit_method.strip('[').strip(']').strip()
@@ -235,6 +235,9 @@ def plot_spectra(eventlabel, ecf_path=None, s5_meta=None, input_meta=None):
                     elif meta.y_param == 'fn':
                         # Nightside emission
                         meta.y_label = r'$F_{\rm p,night}/F_{\rm *}$'
+                    elif meta.y_param == 'spotcon0':
+                        # Spot contrast
+                        meta.y_label = r'$F_{\mathrm{spot}}/F_{\star}$'
                     elif meta.y_param in [f'u{i}' for i in range(1, 5)]:
                         # Limb darkening parameter
                         meta.y_label = r'$u_{\rm '+meta.y_param[-1]+'}$'
@@ -248,8 +251,10 @@ def plot_spectra(eventlabel, ecf_path=None, s5_meta=None, input_meta=None):
                         limb_law = limb_law[1:-1]
                         if limb_law == 'kipping2013':
                             limb_law = 'Kipping (2013)'
+                            meta.y_label = r'$q_{\rm '+meta.y_param[-1]+'}$'
                         elif limb_law == 'kipping2015':
                             limb_law = 'Kipping (2015)'
+                            meta.y_label = r'$q_{\rm '+meta.y_param[-1]+'}$'
                         meta.y_label += ' for '+limb_law
                     elif meta.y_param == 't0':
                         # Time of transit
