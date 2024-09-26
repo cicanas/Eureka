@@ -129,16 +129,21 @@ class BatmanTransitModel(Model):
                          (1 < pl_params.a) and (-1 <= pl_params.ecosw <= 1) and
                          (-1 <= pl_params.esinw <= 1))
                     or (self.parameters.limb_dark.value == 'kipping2013' and
-                        pl_params.u_original[0] <= 0)):
+                        pl_params.u_original[0] <= 0)
+                    or (self.parameters.limb_dark.value == 'kipping2015' and
+                        pl_params.upassed != 1)):
                     # Returning nans or infs breaks the fits, so this was the
                     # best I could think of
                     light_curve = 1e6*np.ma.ones(time.shape)
                     continue
 
                 # Make the transit model
-                m_transit = self.transit_model(pl_params, time,
-                                               transittype='primary')
-                light_curve *= m_transit.light_curve(pl_params)
+                try:
+                    m_transit = self.transit_model(pl_params, time,
+                                                transittype='primary')
+                    light_curve *= m_transit.light_curve(pl_params)
+                except:
+                    light_curve = 1e6*np.ma.ones(time.shape)
 
             lcfinal = np.ma.append(lcfinal, light_curve)
 

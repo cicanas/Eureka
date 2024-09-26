@@ -19,7 +19,7 @@ from ..lib.readEPF import Parameters
 from ..version import version
 
 
-def fitlc(eventlabel, ecf_path=None, s4_meta=None, input_meta=None):
+def fitlc(eventlabel, ecf_path=None, s4_meta=None, input_meta=None, channelnum = None, maxqueuejobs = 100, carnegie = False, h5file = None):
     '''Fits 1D spectra with various models and fitters.
 
     Parameters
@@ -103,8 +103,80 @@ def fitlc(eventlabel, ecf_path=None, s4_meta=None, input_meta=None):
     else:
         chanrng = meta.nspecchan
 
+    #Hack for fitting via aci, place it all in one folder``
+    if channelnum is None:
+        channelstodo = range(chanrng)
+        meta.run_s5 = None
+    elif channelnum <0:
+        ## Request 1 processor on 1 node with 4 GB physical memory and at most 10 hour walltime
+        if not carnegie:
+            template = '''#!/bin/bash
+#SBATCH --mail-type=NONE                 ## Mail events (NONE, BEGIN, END, FAIL, ALL)
+#SBATCH --ntasks=1                       ## CPUs needed
+#SBATCH --mem-per-cpu=8G                 ## Memory per CPU
+#SBATCH --time=8:00:00                   ## Max walltime allowed on open allocation
+#SBATCH --output %x.o%j                  ## Output filename
+#SBATCH --error %x.o%j                   ## Error filename
+#SBATCH --open-mode append               ## Set to append to save to one file
+#SBATCH --account=open                   ## Allocation for ACI
+#SBATCH --partition=open                 ## Partition, open by default but can be sla-prio
+
+python batch.py $channel
+#Iteratively new job
+if ((10#$channel < mymax)) ; then sbatch --job-name=jwstch$((10#$channel+100)) --export=channel=$((10#$channel+100)) batch.pbs ; fi
+'''
+        else:
+            template = '''#!/bin/bash
+#SBATCH --mail-type=NONE                 ## Mail events (NONE, BEGIN, END, FAIL, ALL)
+#SBATCH --ntasks=1                       ## CPUs needed
+#SBATCH --mem-per-cpu=8G                 ## Memory per CPU
+#SBATCH --time=20:00:00                  ## Max walltime allowed on open allocation
+#SBATCH --output %x.o%j                  ## Output filename
+#SBATCH --error %x.o%j                   ## Error filename
+#SBATCH --exclude=memex-2018-[001-012]   ## Exclude nodes to let others do work
+
+module load conda
+conda activate /home/skanodia/conda_env/webbred
+
+python batch.py $channel
+#Iteratively new job
+if ((10#$channel < mymax)) ; then sbatch --job-name=jwstch$((10#$channel+100)) --export=channel=$((10#$channel+100)) batch.pbs ; fi
+'''
+        with open('batch.pbs', "w") as text_file:
+            text_file.write(template.replace('mymax','{:0.0f}'.format(chanrng - maxqueuejobs)).replace('+100','+{:0.0f}'.format(maxqueuejobs)))
+        #Now we make the script for all fits files
+        temp = (np.array2string(np.arange(chanrng),max_line_width=999999,formatter={'int':'{0:03}'.format})[1:-1]).split()
+        if channelnum == -2:
+            done = np.sort(np.vstack(np.char.array(glob('Stage5/*/*/*h5')).replace('.h5','').split('ch'))[:,-1])
+            temp = np.array(temp)[~np.isin(temp,done)]        
+        if channelnum == -3:
+            import pandas as pd
+            done = np.sort(np.vstack(np.char.array(glob('Stage5/*/*/*h5')).replace('.h5','').split('ch'))[:,-1])
+            temp = np.array(temp)[~np.isin(temp,done)]
+            temp = temp[~pd.Series(np.mod(temp.astype(int),maxqueuejobs),name='val').duplicated(keep='first').values]
+        toexport = ('sbatch --job-name=jwstch' + np.char.array(temp).astype(str) + " --export=channel="+np.char.array(temp).astype(str)+" batch.pbs").astype('<U150')
+        toexport[1:] = toexport[1:].replace('--export','--begin=now+6minutes --export')
+        #Save a series of scripts that go up to 200 jobs (limit of QOSMaxJobsPerUserLimit)
+        idx = (np.arange(0,np.floor(len(toexport)/maxqueuejobs)*maxqueuejobs).astype(int).reshape((np.floor(len(toexport)/maxqueuejobs).astype(int),maxqueuejobs))).tolist()
+        if len(idx) == 0:
+            idx = np.atleast_2d(np.arange(0,len(toexport)).astype(int))
+        else:
+            idx.append( (np.arange(len(toexport)-idx[-1][-1]-1)+1+idx[-1][-1]).tolist() )
+        for theseidx in [idx[0]]:
+            np.savetxt('submit_{:03.0f}_{:03.0f}.sh'.format(np.min(theseidx),np.max(theseidx)),np.hstack(['#!/bin/sh',toexport[theseidx]]),delimiter='\t',fmt='%s')        
+        print('**Run the cluster script to fit simultaneously***')
+        os.sys.exit()
+    else:
+        channelstodo = np.atleast_1d(channelnum).clip(min=0,max=chanrng-1)
+        meta.run_s5 = 1 #Force all channels to use the same primary directory
+
     # Create directories for Stage 5 outputs
-    meta.run_s5 = None
+    # meta.run_s5 = None
+    if not hasattr(meta, 'expand'):
+        meta.expand = 1
+
+    # Create directories for Stage 5 outputs
+    # meta.run_s5 = None
     for spec_hw_val in meta.spec_hw_range:
         for bg_hw_val in meta.bg_hw_range:
             if not isinstance(bg_hw_val, str):
@@ -125,7 +197,10 @@ def fitlc(eventlabel, ecf_path=None, s4_meta=None, input_meta=None):
             # Load in the S4 metadata used for this particular aperture pair
             meta = load_specific_s4_meta_info(meta)
             filename_S4_hold = meta.filename_S4_LCData.split(os.sep)[-1]
-            lc = xrio.readXR(meta.inputdir+os.sep+filename_S4_hold)
+            if h5file is None:
+                lc = xrio.readXR(meta.inputdir+os.sep+filename_S4_hold)
+            else:
+                lc = h5file
 
             # Get the number of integrations in this lightcurve so
             # that we know how to split the flattened arrays
@@ -286,6 +361,31 @@ def fitlc(eventlabel, ecf_path=None, s4_meta=None, input_meta=None):
                 flux, flux_err = util.normalize_spectrum(
                     meta, flux, flux_err, scandir=getattr(lc, 'scandir', None))
 
+                # Bin data as needed
+                if hasattr(meta,'binwhite'):                    
+                    import lightkurve
+                    from astropy import units
+                    lkobj = lightkurve.LightCurve(time=time[~flux.mask],flux=flux[~flux.mask].data,flux_err=flux_err[~flux.mask].data)
+                    lkobj_x = lightkurve.LightCurve(time=time[~flux.mask],flux=xpos[~flux.mask].data)
+                    lkobj_y = lightkurve.LightCurve(time=time[~flux.mask],flux=ypos[~flux.mask].data)
+                    lkobj_xwidth = lightkurve.LightCurve(time=time[~flux.mask],flux=xwidth[~flux.mask].data)
+                    lkobj_ywidth = lightkurve.LightCurve(time=time[~flux.mask],flux=ywidth[~flux.mask].data)
+
+                    binned = lkobj.bin(time_bin_size = meta.binwhite * units.s)
+                    binned_x = lkobj_x.bin(time_bin_size = meta.binwhite * units.s)
+                    binned_y = lkobj_y.bin(time_bin_size = meta.binwhite * units.s)
+                    binned_xwidth = lkobj_xwidth.bin(time_bin_size = meta.binwhite * units.s)
+                    binned_ywidth = lkobj_ywidth.bin(time_bin_size = meta.binwhite * units.s)
+
+                    time = binned.time[~np.isnan(binned.flux.value)].value
+                    flux = binned.flux[~np.isnan(binned.flux.value)].value
+                    flux_err = binned.flux_err[~np.isnan(binned.flux.value)].value
+                    xpos = binned_x.flux[~np.isnan(binned.flux.value)].value
+                    ypos = binned_y.flux[~np.isnan(binned.flux.value)].value
+                    xwidth = binned_xwidth.flux[~np.isnan(binned.flux.value)].value
+                    ywidth = binned_ywidth.flux[~np.isnan(binned.flux.value)].value
+                    print('***The size of the binned data is {:0.0f}***'.format(len(flux)))
+
                 meta, params = fit_channel(meta, time, flux, 0, flux_err,
                                            eventlabel, params, log,
                                            longparamlist, time_units,
@@ -370,6 +470,22 @@ def fitlc(eventlabel, ecf_path=None, s4_meta=None, input_meta=None):
                         mask, lc_whites[pi].err.values[0, :])
                     flux_temp, err_temp = util.normalize_spectrum(
                         meta, flux_temp, err_temp, mask)
+                    
+                    # If you want to bin something to XX seconds, recalculate values
+                    if hasattr(meta,'binwhite'):
+                        import lightkurve
+                        from astropy import units
+                        original_time_temp = np.array(time_temp,copy=True)
+                        original_flux_mask = np.array(flux_temp.mask,copy=True)
+                        print('Binning data to {} seconds'.format(meta.binwhite))
+                        lkobj = lightkurve.LightCurve(time=time_temp[~flux_temp.mask],flux=flux_temp[~flux_temp.mask].data,flux_err=err_temp[~flux_temp.mask].data)
+                        binned = lkobj.bin(time_bin_size = meta.binwhite * units.s)
+                        time_temp = binned.time[~np.isnan(binned.flux.value)].value
+                        flux_temp = binned.flux[~np.isnan(binned.flux.value)].value
+                        err_temp = binned.flux_err[~np.isnan(binned.flux.value)].value
+                        print('***The size of the binned data is {:0.0f}***'.format(len(flux_temp)))
+                        meta.nints[pi] = len(flux_temp)
+
                     flux = np.ma.append(flux, flux_temp)
                     flux_err = np.ma.append(flux_err, err_temp)
                     time = np.ma.append(time, time_temp)
@@ -378,24 +494,40 @@ def fitlc(eventlabel, ecf_path=None, s4_meta=None, input_meta=None):
                         xpos_temp = np.ma.masked_invalid(
                             lc_whites[pi].centroid_x.values)
                         xpos_temp = np.ma.masked_where(mask, xpos_temp)
+                        if hasattr(meta,'binwhite'):
+                            lkobj_x = lightkurve.LightCurve(time=original_time_temp[~original_flux_mask],flux=xpos_temp[~original_flux_mask].data)
+                            binned_x = lkobj_x.bin(time_bin_size = meta.binwhite * units.s)
+                            xpos_temp = binned_x.flux[~np.isnan(binned.flux.value)].value
                     else:
                         xpos_temp = None
-                    if hasattr(lc_whites[pi], 'centroid_x'):
+                    if hasattr(lc_whites[pi], 'centroid_sx'):
                         xwidth_temp = np.ma.masked_invalid(
                             lc_whites[pi].centroid_sx.values)
                         xwidth_temp = np.ma.masked_where(mask, xwidth_temp)
+                        if hasattr(meta,'binwhite'):
+                            lkobj_xwidth = lightkurve.LightCurve(time=original_time_temp[~original_flux_mask],flux=xwidth_temp[~original_flux_mask].data)
+                            binned_xwidth = lkobj_xwidth.bin(time_bin_size = meta.binwhite * units.s)
+                            xwidth_temp = binned_xwidth.flux[~np.isnan(binned.flux.value)].value
                     else:
                         xwidth_temp = None
                     if hasattr(lc_whites[pi], 'centroid_y'):
                         ypos_temp = np.ma.masked_invalid(
                             lc_whites[pi].centroid_y.values)
                         ypos_temp = np.ma.masked_where(mask, ypos_temp)
+                        if hasattr(meta,'binwhite'):
+                            lkobj_y = lightkurve.LightCurve(time=original_time_temp[~original_flux_mask],flux=ypos_temp[~original_flux_mask].data)
+                            binned_y = lkobj_y.bin(time_bin_size = meta.binwhite * units.s)
+                            ypos_temp = binned_y.flux[~np.isnan(binned.flux.value)].value
                     else:
                         ypos_temp = None
-                    if hasattr(lc_whites[pi], 'centroid_y'):
+                    if hasattr(lc_whites[pi], 'centroid_sy'):
                         ywidth_temp = np.ma.masked_invalid(
                             lc_whites[pi].centroid_sy.values)
                         ywidth_temp = np.ma.masked_where(mask, ywidth_temp)
+                        if hasattr(meta,'binwhite'):
+                            lkobj_ywidth = lightkurve.LightCurve(time=original_time_temp[~original_flux_mask],flux=ywidth_temp[~original_flux_mask].data)                       
+                            binned_ywidth = lkobj_ywidth.bin(time_bin_size = meta.binwhite * units.s)                      
+                            ywidth_temp = binned_ywidth.flux[~np.isnan(binned.flux.value)].value
                     else:
                         ywidth_temp = None
 
@@ -451,7 +583,7 @@ def fitlc(eventlabel, ecf_path=None, s4_meta=None, input_meta=None):
                 me.saveevent(meta, (meta.outputdir+'S5_'+meta.eventlabel +
                                     "_Meta_Save"), save=[])
             else:
-                for channel in range(chanrng):
+                for channel in channelstodo:
                     log.writelog(f"\nStarting Channel {channel} of "
                                  f"{chanrng}\n")
 
@@ -464,6 +596,46 @@ def fitlc(eventlabel, ecf_path=None, s4_meta=None, input_meta=None):
                                                   lc.err.values[channel, :])
                     time_temp = np.ma.masked_where(mask, time)
 
+                    ## If you want to do a white light curve fit, read things here.
+                    ## If whitefit is not in the S5 ecf OR is false we will NOT fit a white light curve
+                    if hasattr(meta,'whitefit'):
+                        if meta.whitefit:
+                            fitwhite = True
+                            mask = lc.mask_white.values
+                            flux = np.ma.masked_where(mask, lc.flux_white.values)
+                            flux_err = np.ma.masked_where(mask, lc.err_white.values)
+                            time_temp = np.ma.masked_where(mask, time)
+
+                            # If you want to bin something to XX seconds, recalculate values
+                            if hasattr(meta,'binwhite'):  
+                                import lightkurve
+                                from astropy import units
+                                print('Binning data to {} seconds'.format(meta.binwhite))
+                                lkobj = lightkurve.LightCurve(time=time[~flux.mask],flux=flux[~flux.mask].data,flux_err=flux_err[~flux.mask].data)
+                                lkobj_x = lightkurve.LightCurve(time=time[~flux.mask],flux=xpos[~flux.mask].data)
+                                lkobj_y = lightkurve.LightCurve(time=time[~flux.mask],flux=ypos[~flux.mask].data)
+                                lkobj_xwidth = lightkurve.LightCurve(time=time[~flux.mask],flux=xwidth[~flux.mask].data)
+                                lkobj_ywidth = lightkurve.LightCurve(time=time[~flux.mask],flux=ywidth[~flux.mask].data)
+
+                                binned = lkobj.bin(time_bin_size = meta.binwhite * units.s)
+                                binned_x = lkobj_x.bin(time_bin_size = meta.binwhite * units.s)
+                                binned_y = lkobj_y.bin(time_bin_size = meta.binwhite * units.s)
+                                binned_xwidth = lkobj_xwidth.bin(time_bin_size = meta.binwhite * units.s)
+                                binned_ywidth = lkobj_ywidth.bin(time_bin_size = meta.binwhite * units.s)
+
+                                time_temp = binned.time[~np.isnan(binned.flux.value)].value
+                                flux = binned.flux[~np.isnan(binned.flux.value)].value
+                                flux_err = binned.flux_err[~np.isnan(binned.flux.value)].value
+                                xpos = binned_x.flux[~np.isnan(binned.flux.value)].value
+                                ypos = binned_y.flux[~np.isnan(binned.flux.value)].value
+                                xwidth = binned_xwidth.flux[~np.isnan(binned.flux.value)].value
+                                ywidth = binned_ywidth.flux[~np.isnan(binned.flux.value)].value
+                                print('***The size of the binned data is {:0.0f}***'.format(len(flux)))
+                        else:
+                            fitwhite = False
+                    else:
+                        fitwhite = False
+
                     # Normalize flux and uncertainties to avoid large
                     # flux values
                     flux, flux_err = util.normalize_spectrum(
@@ -475,7 +647,7 @@ def fitlc(eventlabel, ecf_path=None, s4_meta=None, input_meta=None):
                                                log, longparamlist, time_units,
                                                paramtitles, freenames, chanrng,
                                                ld_coeffs, xpos, ypos,
-                                               xwidth, ywidth)
+                                               xwidth, ywidth, fitwhite)
 
                     # Save results
                     log.writelog('Saving results', mute=(not meta.verbose))
@@ -688,6 +860,25 @@ def fit_channel(meta, time, flux, chan, flux_err, eventlabel, params,
                                         multwhite=lc_model.multwhite,
                                         nints=lc_model.nints,
                                         num_planets=meta.num_planets)
+        modellist.append(t_transit)
+    if 'spotrod' in meta.run_myfuncs:
+        t_transit = m.SpotrodTransitModel(parameters=params,
+                                          fmt='r--', log=log, time=time,
+                                          time_units=time_units,
+                                          freenames=freenames,
+                                          longparamlist=lc_model.longparamlist,
+                                          nchannel=chanrng,
+                                          nchannel_fitted=nchannel_fitted,
+                                          fitted_channels=fitted_channels,
+                                          paramtitles=paramtitles,
+                                          ld_from_S4=meta.use_generate_ld,
+                                          ld_from_file=meta.ld_file,
+                                          ld_coeffs=ldcoeffs,
+                                          recenter_ld_prior=meta.recenter_ld_prior,  # noqa: E501
+                                          compute_ltt=meta.compute_ltt,
+                                          multwhite=lc_model.multwhite,
+                                          nints=lc_model.nints,
+                                          num_planets=meta.num_planets)
         modellist.append(t_transit)
     if 'poet_tr' in meta.run_myfuncs:
         t_poet_tr = PoetTransitModel(parameters=params,

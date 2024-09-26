@@ -251,6 +251,10 @@ def plot_spectra(eventlabel, ecf_path=None, s5_meta=None, input_meta=None):
                         suffix = planetSuffix+channelSuffix
                         meta.y_label = ('$F_{\\rm p'+suffix + ',night'
                                         '}/F_{\\rm *}$')
+                    elif meta.y_param_basic == 'spotcon':
+                        # Spot contrast
+                        suffix = planetSuffix+channelSuffix
+                        meta.y_label = r'$F_{\mathrm{spot}}/F_{\star}$'
                     elif meta.y_param_basic == 't0':
                         # Time of transit
                         suffix = planetSuffix+channelSuffix
@@ -306,7 +310,10 @@ def plot_spectra(eventlabel, ecf_path=None, s5_meta=None, input_meta=None):
                         limb_law = limb_law[1:-1]
                         if limb_law == 'kipping2013':
                             limb_law = 'Kipping (2013)'
+                        elif limb_law == 'kipping2015':
+                            limb_law = 'Kipping (2015)'
                         meta.y_label += ' for '+limb_law+suffix
+                        
                     elif meta.y_param_basic in [f'c{i}' for i in range(0, 10)]:
                         # Polynomial in time coefficient
                         suffix = channelSuffix

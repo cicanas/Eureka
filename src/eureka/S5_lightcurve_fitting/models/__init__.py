@@ -14,3 +14,5 @@ from .PolynomialModel import PolynomialModel
 from .QuasiLambertianPhaseCurve import QuasiLambertianPhaseCurve
 from .SinusoidPhaseCurve import SinusoidPhaseCurveModel
 from .StepModel import StepModel
+from .SpotrodModel import SpotrodTransitModel
+from . import Slowspotrod

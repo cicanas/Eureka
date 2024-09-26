@@ -20,6 +20,14 @@ from .KeplerOrbit import KeplerOrbit
 from ..limb_darkening_fit import ld_profile
 from ...lib.split_channels import split
 
+try:
+    import os
+    os.sys.path.append(os.environ['LDC3_PATH'])
+    import LDC3
+except:
+    print("Could not import LDC3. Code will break if you specify an LD law of 'kipping2015'.")
+
+
 
 class PlanetParams():
     """
@@ -105,6 +113,12 @@ class PlanetParams():
         self.spotlat = 0.
         self.spotlon = 0.
         self.spotcon = 0.
+        # Spotrod here
+        self.spotx = 0.
+        self.spoty = 0.
+        self.spotu = 0.
+        self.spotv = 0.
+
         for n in range(1, self.nspots):
             # read radii, latitudes, longitudes, and contrasts
             spot_id = f'{n}'
@@ -112,6 +126,11 @@ class PlanetParams():
             setattr(self, f'spotlat{spot_id}', 0)
             setattr(self, f'spotlon{spot_id}', 0)
             setattr(self, f'spotcon{spot_id}', 0)
+            setattr(self, f'spotx{spot_id}', 0)
+            setattr(self, f'spoty{spot_id}', 0)
+            setattr(self, f'spotu{spot_id}', 0)
+            setattr(self, f'spotv{spot_id}', 0)
+            
         self.spotstari = 90
         self.spotrot = None
         self.spotnpts = None
@@ -279,6 +298,16 @@ class PlanetParams():
                 u1 = 2*tt.sqrt(self.u1)*self.u2
                 u2 = tt.sqrt(self.u1)*(1-2*self.u2)
                 self.u = np.array([u1, u2])
+        elif self.limb_dark == 'kipping2015':
+            self.limb_dark  = 'nonlinear'
+            u1 = 0
+            if eval:
+                u2, u3, u4 = LDC3.forward(self.u)
+                self.upassed = LDC3.criteriatest(0,[u2,u3,u4])
+                self.u = np.array([u1, u2, u3, u4])
+            else:
+                self.u = np.array([u1, self.u[0], self.u[1], self.u[2]])
+                self.upassed = 1
 
         # Make sure (e, w, ecosw, and esinw) are all defined (assuming e=0)
         if self.ecc is None:

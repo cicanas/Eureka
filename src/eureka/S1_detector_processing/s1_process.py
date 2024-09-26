@@ -198,6 +198,11 @@ class EurekaS1Pipeline(Detector1Pipeline):
         self.jump.minimum_sigclip_groups = meta.minimum_sigclip_groups
         self.gain_scale.skip = meta.skip_gain_scale
 
+        # Save the outputs for each step in the S1 output directory
+        for thisstep in np.array(list(self.steps.keys())):
+            exec('self.{}.save_results=True'.format(thisstep))
+            exec('self.{}.output_dir="{}"'.format(thisstep,meta.outputdir))
+
         # Instrument Specific Steps
         if meta.inst in ['nircam', 'niriss', 'nirspec']:
             self.persistence.skip = meta.skip_persistence
