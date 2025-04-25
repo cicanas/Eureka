@@ -188,7 +188,7 @@ def kipping2013(m, c1, c2):
 
 
 def kipping2016(m, c1, c2, c3):
-    """Reparameterized 3-parameter (Kipping 2015) limb darkening.
+    """Reparameterized 3-parameter (Kipping 2016) limb darkening.
 
     Parameters
     ----------
