@@ -15,6 +15,13 @@ try:
 except ImportError:
     pass
 
+try:
+    import os
+    os.sys.path.append(os.environ['LDC3_PATH'])
+    import LDC3
+except:
+    print("Could not import LDC3. Code will break if you specify an LD law of 'kipping2016'.")
+
 from .Model import Model
 from .KeplerOrbit import KeplerOrbit
 from ..limb_darkening_fit import ld_profile
@@ -320,6 +327,17 @@ class PlanetParams():
                 u1 = 2*tt.sqrt(self.u1)*self.u2
                 u2 = tt.sqrt(self.u1)*(1-2*self.u2)
                 self.u = np.array([u1, u2])
+        elif self.limb_dark == 'kipping2016':
+            self.limb_dark = 'nonlinear'
+            if eval:
+                u1 = 0
+                u2, u3, u4 = LDC3.forward(self.u)
+                self.u_passed = LDC3.criteriatest(0,[u2,u3,u4])
+                self.u = np.array([u1, u2, u3, u4])
+            else:
+                u1 = 0
+                u2, u3, u4 = LDC3.forward(self.u)
+                self.u = np.array([u1, u2, u3, u4])
 
         # Make sure (e, w, ecosw, and esinw) are all defined (assuming e=0)
         if self.ecc is None:
