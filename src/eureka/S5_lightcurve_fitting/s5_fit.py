@@ -19,7 +19,7 @@ from ..lib.readEPF import Parameters
 from ..version import version
 
 
-def fitlc(eventlabel, ecf_path=None, s4_meta=None, input_meta=None):
+def fitlc(eventlabel, ecf_path=None, s4_meta=None, input_meta=None, channelnum = None, maxqueuejobs = 100, h5file = None):
     '''Fits 1D spectra with various models and fitters.
 
     Parameters
@@ -55,6 +55,9 @@ def fitlc(eventlabel, ecf_path=None, s4_meta=None, input_meta=None):
     meta.eventlabel = eventlabel
     meta.datetime = time_pkg.strftime('%Y-%m-%d')
 
+    if not hasattr(meta, 'multwhite'):
+        meta.multwhite = False
+
     if s4_meta is None:
         # Locate the old MetaClass savefile, and load new ECF into
         # that old MetaClass
@@ -86,8 +89,56 @@ def fitlc(eventlabel, ecf_path=None, s4_meta=None, input_meta=None):
     else:
         chanrng = meta.nspecchan
 
+    # Hack for fitting on PSU cluster
+    if channelnum is None:
+        channelstodo = range(chanrng)
+        meta.run_s5 = None
+    elif channelnum <0:
+        ## Request 1 processor on 1 node with 4 GB physical memory and at most 8 hour walltime
+        template = '''#!/bin/bash
+#SBATCH --mail-type=NONE                 ## Mail events (NONE, BEGIN, END, FAIL, ALL)
+#SBATCH --ntasks=1                       ## CPUs needed
+#SBATCH --mem-per-cpu=8G                 ## Memory per CPU
+#SBATCH --time=8:00:00                   ## Max walltime allowed on open allocation
+#SBATCH --output %x.o%j                  ## Output filename
+#SBATCH --error %x.o%j                   ## Error filename
+#SBATCH --open-mode append               ## Set to append to save to one file
+#SBATCH --account=open                   ## Allocation for ACI
+#SBATCH --partition=open                 ## Partition, open by default but can be sla-prio
+
+python batch.py $channel
+#Iteratively new job
+if ((10#$channel < mymax)) ; then sbatch --job-name=jwstch$((10#$channel+100)) --export=channel=$((10#$channel+100)) batch.sh ; fi
+'''
+        with open('batch.sh', "w") as text_file:
+            text_file.write(template.replace('mymax','{:0.0f}'.format(chanrng - maxqueuejobs)).replace('+100','+{:0.0f}'.format(maxqueuejobs)))
+        #Now we make the script for all fits files
+        temp = (np.array2string(np.arange(chanrng),max_line_width=999999,formatter={'int':'{0:03}'.format})[1:-1]).split()
+        if channelnum == -2:
+            done = np.sort(np.vstack(np.char.array(glob('Stage5/*/*/*h5')).replace('.h5','').split('ch'))[:,-1])
+            temp = np.array(temp)[~np.isin(temp,done)]        
+        if channelnum == -3:
+            import pandas as pd
+            done = np.sort(np.vstack(np.char.array(glob('Stage5/*/*/*h5')).replace('.h5','').split('ch'))[:,-1])
+            temp = np.array(temp)[~np.isin(temp,done)]
+            temp = temp[~pd.Series(np.mod(temp.astype(int),maxqueuejobs),name='val').duplicated(keep='first').values]
+        toexport = ('sbatch --job-name=jwstch' + np.char.array(temp).astype(str) + " --export=channel="+np.char.array(temp).astype(str)+" batch.sh").astype('<U150')
+        toexport[1:] = toexport[1:].replace('--export','--begin=now+6minutes --export')
+        #Save a series of scripts that go up to 200 jobs (limit of QOSMaxJobsPerUserLimit)
+        idx = (np.arange(0,np.floor(len(toexport)/maxqueuejobs)*maxqueuejobs).astype(int).reshape((np.floor(len(toexport)/maxqueuejobs).astype(int),maxqueuejobs))).tolist()
+        if len(idx) == 0:
+            idx = np.atleast_2d(np.arange(0,len(toexport)).astype(int))
+        else:
+            idx.append( (np.arange(len(toexport)-idx[-1][-1]-1)+1+idx[-1][-1]).tolist() )
+        for theseidx in [idx[0]]:
+            np.savetxt('submit_{:03.0f}_{:03.0f}.sh'.format(np.min(theseidx),np.max(theseidx)),np.hstack(['#!/bin/sh',toexport[theseidx]]),delimiter='\t',fmt='%s')        
+        print('**Run the cluster script to fit simultaneously***')
+        os.sys.exit()
+    else:
+        channelstodo = np.atleast_1d(channelnum).clip(min=0,max=chanrng-1)
+        meta.run_s5 = 1 #Force all channels to use the same primary directory
+
     # Create directories for Stage 5 outputs
-    meta.run_s5 = None
     for spec_hw_val in meta.spec_hw_range:
         for bg_hw_val in meta.bg_hw_range:
             if not isinstance(bg_hw_val, str):
@@ -108,7 +159,10 @@ def fitlc(eventlabel, ecf_path=None, s4_meta=None, input_meta=None):
             # Load in the S4 metadata used for this particular aperture pair
             meta = load_specific_s4_meta_info(meta)
             filename_S4_hold = meta.filename_S4_LCData.split(os.sep)[-1]
-            lc = xrio.readXR(meta.inputdir+os.sep+filename_S4_hold)
+            if h5file is None:
+                lc = xrio.readXR(meta.inputdir+os.sep+filename_S4_hold)
+            else:
+                lc = h5file
 
             # Get the number of integrations in this lightcurve so
             # that we know how to split the flattened arrays
@@ -417,7 +471,7 @@ def fitlc(eventlabel, ecf_path=None, s4_meta=None, input_meta=None):
 
                 flux = np.ma.masked_array([])
                 flux_err = np.ma.masked_array([])
-                for channel in range(chanrng):
+                for channel in channelstodo:
                     mask = lc.mask.values[channel, :]
                     flux_temp = np.ma.masked_where(mask,
                                                    lc.data.values[channel, :])
