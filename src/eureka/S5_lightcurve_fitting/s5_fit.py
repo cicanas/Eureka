@@ -495,7 +495,7 @@ if ((10#$channel < mymax)) ; then sbatch --job-name=jwstch$((10#$channel+100)) -
                 me.saveevent(meta, (meta.outputdir+'S5_'+meta.eventlabel +
                                     "_Meta_Save"), save=[])
             else:
-                for channel in range(chanrng):
+                for channel in channelstodo:
                     log.writelog(f"\nStarting Channel {channel} of "
                                  f"{chanrng}\n")
 
