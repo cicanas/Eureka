@@ -329,6 +329,32 @@ if ((10#$channel < mymax)) ; then sbatch --job-name=jwstch$((10#$channel+100)) -
                 flux, flux_err = util.normalize_spectrum(
                     meta, flux, flux_err, scandir=getattr(lc, 'scandir', None))
 
+                # Bin data as needed
+                if hasattr(meta,'binwhite'):
+                    if meta.binwhite > 0:
+                        import lightkurve
+                        from astropy import units
+                        lkobj = lightkurve.LightCurve(time=time[~flux.mask],flux=flux[~flux.mask].data,flux_err=flux_err[~flux.mask].data)
+                        lkobj_x = lightkurve.LightCurve(time=time[~flux.mask],flux=xpos[~flux.mask].data)
+                        lkobj_y = lightkurve.LightCurve(time=time[~flux.mask],flux=ypos[~flux.mask].data)
+                        lkobj_xwidth = lightkurve.LightCurve(time=time[~flux.mask],flux=xwidth[~flux.mask].data)
+                        lkobj_ywidth = lightkurve.LightCurve(time=time[~flux.mask],flux=ywidth[~flux.mask].data)
+
+                        binned = lkobj.bin(time_bin_size = meta.binwhite * units.s)
+                        binned_x = lkobj_x.bin(time_bin_size = meta.binwhite * units.s)
+                        binned_y = lkobj_y.bin(time_bin_size = meta.binwhite * units.s)
+                        binned_xwidth = lkobj_xwidth.bin(time_bin_size = meta.binwhite * units.s)
+                        binned_ywidth = lkobj_ywidth.bin(time_bin_size = meta.binwhite * units.s)
+
+                        time = binned.time[~np.isnan(binned.flux.value)].value
+                        flux = binned.flux[~np.isnan(binned.flux.value)].value
+                        flux_err = binned.flux_err[~np.isnan(binned.flux.value)].value
+                        xpos = binned_x.flux[~np.isnan(binned.flux.value)].value
+                        ypos = binned_y.flux[~np.isnan(binned.flux.value)].value
+                        xwidth = binned_xwidth.flux[~np.isnan(binned.flux.value)].value
+                        ywidth = binned_ywidth.flux[~np.isnan(binned.flux.value)].value
+                        print('***The size of the binned data is {:0.0f}***'.format(len(flux)))
+
                 meta, params = fit_channel(meta, time, flux, 0, flux_err,
                                            eventlabel, params, log,
                                            longparamlist, time_units,
@@ -414,6 +440,22 @@ if ((10#$channel < mymax)) ; then sbatch --job-name=jwstch$((10#$channel+100)) -
                     flux_temp, err_temp = util.normalize_spectrum(
                         meta, flux_temp, err_temp, mask,
                         scandir=getattr(lc_whites[pi], 'scandir', None))
+                    # If you want to bin something to XX seconds, recalculate values
+                    if hasattr(meta,'binwhite'):
+                        if meta.binwhite > 0:
+                            import lightkurve
+                            from astropy import units
+                            original_time_temp = np.array(time_temp,copy=True)
+                            original_flux_mask = np.array(flux_temp.mask,copy=True)
+                            print('Binning data to {} seconds'.format(meta.binwhite))
+                            lkobj = lightkurve.LightCurve(time=time_temp[~flux_temp.mask],flux=flux_temp[~flux_temp.mask].data,flux_err=err_temp[~flux_temp.mask].data)
+                            binned = lkobj.bin(time_bin_size = meta.binwhite * units.s)
+                            time_temp = binned.time[~np.isnan(binned.flux.value)].value
+                            flux_temp = binned.flux[~np.isnan(binned.flux.value)].value
+                            err_temp = binned.flux_err[~np.isnan(binned.flux.value)].value
+                            print('***The size of the binned data is {:0.0f}***'.format(len(flux_temp)))
+                            meta.nints[pi] = len(flux_temp)
+
                     flux = np.ma.append(flux, flux_temp)
                     flux_err = np.ma.append(flux_err, err_temp)
                     time = np.ma.append(time, time_temp)
@@ -422,24 +464,44 @@ if ((10#$channel < mymax)) ; then sbatch --job-name=jwstch$((10#$channel+100)) -
                         xpos_temp = np.ma.masked_invalid(
                             lc_whites[pi].centroid_x.values)
                         xpos_temp = np.ma.masked_where(mask, xpos_temp)
+                        if hasattr(meta,'binwhite'):
+                            if meta.binwhite > 0:
+                                lkobj_x = lightkurve.LightCurve(time=original_time_temp[~original_flux_mask],flux=xpos_temp[~original_flux_mask].data)
+                                binned_x = lkobj_x.bin(time_bin_size = meta.binwhite * units.s)
+                                xpos_temp = binned_x.flux[~np.isnan(binned.flux.value)].value
                     else:
                         xpos_temp = None
                     if hasattr(lc_whites[pi], 'centroid_sx'):
                         xwidth_temp = np.ma.masked_invalid(
                             lc_whites[pi].centroid_sx.values)
                         xwidth_temp = np.ma.masked_where(mask, xwidth_temp)
+                        if hasattr(meta,'binwhite'):
+                            if meta.binwhite > 0:
+                                lkobj_xwidth = lightkurve.LightCurve(time=original_time_temp[~original_flux_mask],flux=xwidth_temp[~original_flux_mask].data)
+                                binned_xwidth = lkobj_xwidth.bin(time_bin_size = meta.binwhite * units.s)
+                                xwidth_temp = binned_xwidth.flux[~np.isnan(binned.flux.value)].value
                     else:
                         xwidth_temp = None
                     if hasattr(lc_whites[pi], 'centroid_y'):
                         ypos_temp = np.ma.masked_invalid(
                             lc_whites[pi].centroid_y.values)
                         ypos_temp = np.ma.masked_where(mask, ypos_temp)
+                        if hasattr(meta,'binwhite'):
+                            if meta.binwhite > 0:
+                                lkobj_y = lightkurve.LightCurve(time=original_time_temp[~original_flux_mask],flux=ypos_temp[~original_flux_mask].data)
+                                binned_y = lkobj_y.bin(time_bin_size = meta.binwhite * units.s)
+                                ypos_temp = binned_y.flux[~np.isnan(binned.flux.value)].value
                     else:
                         ypos_temp = None
                     if hasattr(lc_whites[pi], 'centroid_sy'):
                         ywidth_temp = np.ma.masked_invalid(
                             lc_whites[pi].centroid_sy.values)
                         ywidth_temp = np.ma.masked_where(mask, ywidth_temp)
+                        if hasattr(meta,'binwhite'):
+                            if meta.binwhite > 0:
+                                lkobj_ywidth = lightkurve.LightCurve(time=original_time_temp[~original_flux_mask],flux=ywidth_temp[~original_flux_mask].data)                       
+                                binned_ywidth = lkobj_ywidth.bin(time_bin_size = meta.binwhite * units.s)                      
+                                ywidth_temp = binned_ywidth.flux[~np.isnan(binned.flux.value)].value
                     else:
                         ywidth_temp = None
 
@@ -471,7 +533,7 @@ if ((10#$channel < mymax)) ; then sbatch --job-name=jwstch$((10#$channel+100)) -
 
                 flux = np.ma.masked_array([])
                 flux_err = np.ma.masked_array([])
-                for channel in channelstodo:
+                for channel in range(chanrng):
                     mask = lc.mask.values[channel, :]
                     flux_temp = np.ma.masked_where(mask,
                                                    lc.data.values[channel, :])
@@ -508,6 +570,47 @@ if ((10#$channel < mymax)) ; then sbatch --job-name=jwstch$((10#$channel+100)) -
                                                   lc.err.values[channel, :])
                     time_temp = np.ma.masked_where(mask, time)
 
+                    ## If you want to do a white light curve fit, read things here.
+                    ## If whitefit is not in the S5 ecf OR if it exists and is false, we will NOT fit a white light curve
+                    if hasattr(meta,'whitefit'):
+                        if meta.whitefit:
+                            fitwhite = True
+                            mask = lc.mask_white.values
+                            flux = np.ma.masked_where(mask, lc.flux_white.values)
+                            flux_err = np.ma.masked_where(mask, lc.err_white.values)
+                            time_temp = np.ma.masked_where(mask, time)
+
+                            # If you want to bin something to XX seconds, recalculate values
+                            if hasattr(meta,'binwhite'):  
+                                if meta.binwhite > 0:
+                                    import lightkurve
+                                    from astropy import units
+                                    print('Binning data to {} seconds'.format(meta.binwhite))
+                                    lkobj = lightkurve.LightCurve(time=time[~flux.mask],flux=flux[~flux.mask].data,flux_err=flux_err[~flux.mask].data)
+                                    lkobj_x = lightkurve.LightCurve(time=time[~flux.mask],flux=xpos[~flux.mask].data)
+                                    lkobj_y = lightkurve.LightCurve(time=time[~flux.mask],flux=ypos[~flux.mask].data)
+                                    lkobj_xwidth = lightkurve.LightCurve(time=time[~flux.mask],flux=xwidth[~flux.mask].data)
+                                    lkobj_ywidth = lightkurve.LightCurve(time=time[~flux.mask],flux=ywidth[~flux.mask].data)
+
+                                    binned = lkobj.bin(time_bin_size = meta.binwhite * units.s)
+                                    binned_x = lkobj_x.bin(time_bin_size = meta.binwhite * units.s)
+                                    binned_y = lkobj_y.bin(time_bin_size = meta.binwhite * units.s)
+                                    binned_xwidth = lkobj_xwidth.bin(time_bin_size = meta.binwhite * units.s)
+                                    binned_ywidth = lkobj_ywidth.bin(time_bin_size = meta.binwhite * units.s)
+
+                                    time_temp = binned.time[~np.isnan(binned.flux.value)].value
+                                    flux = binned.flux[~np.isnan(binned.flux.value)].value
+                                    flux_err = binned.flux_err[~np.isnan(binned.flux.value)].value
+                                    xpos = binned_x.flux[~np.isnan(binned.flux.value)].value
+                                    ypos = binned_y.flux[~np.isnan(binned.flux.value)].value
+                                    xwidth = binned_xwidth.flux[~np.isnan(binned.flux.value)].value
+                                    ywidth = binned_ywidth.flux[~np.isnan(binned.flux.value)].value
+                                    print('***The size of the binned data is {:0.0f}***'.format(len(flux)))
+                        else:
+                            fitwhite = False
+                    else:
+                        fitwhite = False
+
                     # Normalize flux and uncertainties to avoid large
                     # flux values
                     flux, flux_err = util.normalize_spectrum(
@@ -519,7 +622,7 @@ if ((10#$channel < mymax)) ; then sbatch --job-name=jwstch$((10#$channel+100)) -
                                                log, longparamlist, time_units,
                                                paramtitles, freenames, chanrng,
                                                ld_coeffs, xpos, ypos,
-                                               xwidth, ywidth)
+                                               xwidth, ywidth, white = fitwhite)
 
                     # Save results
                     log.writelog('Saving results', mute=(not meta.verbose))
@@ -649,7 +752,7 @@ def fit_channel(meta, time, flux, chan, flux_err, eventlabel, params,
                                 fitted_channels=fitted_channels,
                                 paramtitles=paramtitles,
                                 multwhite=lc_model.multwhite,
-                                nints=lc_model.nints)
+                                nints=[len(time)] if white else lc_model.nints)
         fakeramp.coeffs = (np.array([-1, 40, 0, 0]).reshape(1, -1)
                            * np.ones(nchannel_fitted))
         flux *= fakeramp.eval(time=time)
@@ -683,7 +786,7 @@ def fit_channel(meta, time, flux, chan, flux_err, eventlabel, params,
                                recenter_spotcon_prior=meta.recenter_spotcon_prior,  # noqa: E501
                                compute_ltt=meta.compute_ltt,
                                multwhite=lc_model.multwhite,
-                               nints=lc_model.nints,
+                               nints=[len(time)] if white else lc_model.nints,
                                num_planets=meta.num_planets,
                                mutualOccultations=meta.mutualOccultations,
                                force_positivity=meta.force_positivity,
@@ -707,7 +810,7 @@ def fit_channel(meta, time, flux, chan, flux_err, eventlabel, params,
                                        recenter_ld_prior=meta.recenter_ld_prior,  # noqa: E501
                                        compute_ltt=meta.compute_ltt,
                                        multwhite=lc_model.multwhite,
-                                       nints=lc_model.nints,
+                                       nints=[len(time)] if white else lc_model.nints,
                                        num_planets=meta.num_planets)
         modellist.append(t_transit)
     if 'batman_ecl' in meta.run_myfuncs:
@@ -722,7 +825,7 @@ def fit_channel(meta, time, flux, chan, flux_err, eventlabel, params,
                                        paramtitles=paramtitles,
                                        compute_ltt=meta.compute_ltt,
                                        multwhite=lc_model.multwhite,
-                                       nints=lc_model.nints,
+                                       nints=[len(time)] if white else lc_model.nints,
                                        num_planets=meta.num_planets)
         modellist.append(t_eclipse)
     if 'catwoman_tr' in meta.run_myfuncs:
@@ -741,7 +844,7 @@ def fit_channel(meta, time, flux, chan, flux_err, eventlabel, params,
                                          recenter_ld_prior=meta.recenter_ld_prior,  # noqa: E501
                                          compute_ltt=meta.compute_ltt,
                                          multwhite=lc_model.multwhite,
-                                         nints=lc_model.nints,
+                                         nints=[len(time)] if white else lc_model.nints,
                                          num_planets=meta.num_planets,
                                          fac=meta.catwoman_fac,
                                          max_err=meta.catwoman_max_err)
@@ -764,7 +867,7 @@ def fit_channel(meta, time, flux, chan, flux_err, eventlabel, params,
                                         recenter_spotcon_prior=meta.recenter_spotcon_prior,  # noqa: E501
                                         compute_ltt=meta.compute_ltt,
                                         multwhite=lc_model.multwhite,
-                                        nints=lc_model.nints,
+                                        nints=[len(time)] if white else lc_model.nints,
                                         num_planets=meta.num_planets)
         modellist.append(t_transit)
     if 'poet_tr' in meta.run_myfuncs:
@@ -783,7 +886,7 @@ def fit_channel(meta, time, flux, chan, flux_err, eventlabel, params,
                                      recenter_ld_prior=meta.recenter_ld_prior,
                                      compute_ltt=meta.compute_ltt,
                                      multwhite=lc_model.multwhite,
-                                     nints=lc_model.nints,
+                                     nints=[len(time)] if white else lc_model.nints,
                                      num_planets=meta.num_planets)
         modellist.append(t_poet_tr)
     if 'poet_ecl' in meta.run_myfuncs:
@@ -798,7 +901,7 @@ def fit_channel(meta, time, flux, chan, flux_err, eventlabel, params,
                                       paramtitles=paramtitles,
                                       compute_ltt=meta.compute_ltt,
                                       multwhite=lc_model.multwhite,
-                                      nints=lc_model.nints,
+                                      nints=[len(time)] if white else lc_model.nints,
                                       num_planets=meta.num_planets)
         modellist.append(t_poet_ecl)
     if 'poet_pc' in meta.run_myfuncs:
@@ -813,7 +916,7 @@ def fit_channel(meta, time, flux, chan, flux_err, eventlabel, params,
                                 paramtitles=paramtitles,
                                 force_positivity=meta.force_positivity,
                                 multwhite=lc_model.multwhite,
-                                nints=lc_model.nints,
+                                nints=[len(time)] if white else lc_model.nints,
                                 num_planets=meta.num_planets)
         modellist.append(t_poet_pc)
     if 'sinusoid_pc' in meta.run_myfuncs:
@@ -828,7 +931,7 @@ def fit_channel(meta, time, flux, chan, flux_err, eventlabel, params,
                                 paramtitles=paramtitles,
                                 force_positivity=meta.force_positivity,
                                 multwhite=lc_model.multwhite,
-                                nints=lc_model.nints,
+                                nints=[len(time)] if white else lc_model.nints,
                                 num_planets=meta.num_planets)
         modellist.append(t_phase)
     if 'quasilambert_pc' in meta.run_myfuncs:
@@ -843,7 +946,7 @@ def fit_channel(meta, time, flux, chan, flux_err, eventlabel, params,
                                       fitted_channels=fitted_channels,
                                       paramtitles=paramtitles,
                                       multwhite=lc_model.multwhite,
-                                      nints=lc_model.nints,
+                                      nints=[len(time)] if white else lc_model.nints,
                                       num_planets=meta.num_planets)
         modellist.append(t_phase)
     if 'damped_osc' in meta.run_myfuncs:
@@ -857,7 +960,7 @@ def fit_channel(meta, time, flux, chan, flux_err, eventlabel, params,
                                       fitted_channels=fitted_channels,
                                       paramtitles=paramtitles,
                                       multwhite=lc_model.multwhite,
-                                      nints=lc_model.nints)
+                                      nints=[len(time)] if white else lc_model.nints)
         modellist.append(t_osc)
     if 'lorentzian' in meta.run_myfuncs:
         t_lorentzian = LorentzianModel(parameters=params,
@@ -870,7 +973,7 @@ def fit_channel(meta, time, flux, chan, flux_err, eventlabel, params,
                                        fitted_channels=fitted_channels,
                                        paramtitles=paramtitles,
                                        multwhite=lc_model.multwhite,
-                                       nints=lc_model.nints)
+                                       nints=[len(time)] if white else lc_model.nints)
         modellist.append(t_lorentzian)
     if 'polynomial' in meta.run_myfuncs:
         t_polynom = PolynomialModel(parameters=params,
@@ -883,7 +986,7 @@ def fit_channel(meta, time, flux, chan, flux_err, eventlabel, params,
                                     fitted_channels=fitted_channels,
                                     paramtitles=paramtitles,
                                     multwhite=lc_model.multwhite,
-                                    nints=lc_model.nints)
+                                    nints=[len(time)] if white else lc_model.nints)
         modellist.append(t_polynom)
     if 'step' in meta.run_myfuncs:
         t_step = StepModel(parameters=params, fmt='r--',
@@ -895,7 +998,7 @@ def fit_channel(meta, time, flux, chan, flux_err, eventlabel, params,
                            fitted_channels=fitted_channels,
                            paramtitles=paramtitles,
                            multwhite=lc_model.multwhite,
-                           nints=lc_model.nints)
+                           nints=[len(time)] if white else lc_model.nints)
         modellist.append(t_step)
     if 'expramp' in meta.run_myfuncs:
         t_expramp = ExpRampModel(parameters=params, fmt='r--',
@@ -907,7 +1010,7 @@ def fit_channel(meta, time, flux, chan, flux_err, eventlabel, params,
                                  fitted_channels=fitted_channels,
                                  paramtitles=paramtitles,
                                  multwhite=lc_model.multwhite,
-                                 nints=lc_model.nints)
+                                 nints=[len(time)] if white else lc_model.nints)
         modellist.append(t_expramp)
     if 'hstramp' in meta.run_myfuncs:
         t_hstramp = HSTRampModel(parameters=params, fmt='r--',
@@ -919,7 +1022,7 @@ def fit_channel(meta, time, flux, chan, flux_err, eventlabel, params,
                                  fitted_channels=fitted_channels,
                                  paramtitles=paramtitles,
                                  multwhite=lc_model.multwhite,
-                                 nints=lc_model.nints)
+                                 nints=[len(time)] if white else lc_model.nints)
         modellist.append(t_hstramp)
     if 'xpos' in meta.run_myfuncs:
         t_cent = CentroidModel(parameters=params, fmt='r--',
@@ -932,7 +1035,7 @@ def fit_channel(meta, time, flux, chan, flux_err, eventlabel, params,
                                paramtitles=paramtitles,
                                axis='xpos', centroid=xpos,
                                multwhite=lc_model.multwhite,
-                               nints=lc_model.nints)
+                               nints=[len(time)] if white else lc_model.nints)
         modellist.append(t_cent)
     if 'xwidth' in meta.run_myfuncs:
         t_cent = CentroidModel(parameters=params, fmt='r--',
@@ -945,7 +1048,7 @@ def fit_channel(meta, time, flux, chan, flux_err, eventlabel, params,
                                paramtitles=paramtitles,
                                axis='xwidth', centroid=xwidth,
                                multwhite=lc_model.multwhite,
-                               nints=lc_model.nints)
+                               nints=[len(time)] if white else lc_model.nints)
         modellist.append(t_cent)
     if 'ypos' in meta.run_myfuncs:
         t_cent = CentroidModel(parameters=params, fmt='r--',
@@ -958,7 +1061,7 @@ def fit_channel(meta, time, flux, chan, flux_err, eventlabel, params,
                                paramtitles=paramtitles,
                                axis='ypos', centroid=ypos,
                                multwhite=lc_model.multwhite,
-                               nints=lc_model.nints)
+                               nints=[len(time)] if white else lc_model.nints)
         modellist.append(t_cent)
     if 'ywidth' in meta.run_myfuncs:
         t_cent = CentroidModel(parameters=params, fmt='r--',
@@ -971,7 +1074,7 @@ def fit_channel(meta, time, flux, chan, flux_err, eventlabel, params,
                                paramtitles=paramtitles,
                                axis='ywidth', centroid=ywidth,
                                multwhite=lc_model.multwhite,
-                               nints=lc_model.nints)
+                               nints=[len(time)] if white else lc_model.nints)
         modellist.append(t_cent)
     if 'GP' in meta.run_myfuncs:
         t_GP = GPModel(meta.kernel_class, meta.kernel_inputs, lc_model,
@@ -986,7 +1089,7 @@ def fit_channel(meta, time, flux, chan, flux_err, eventlabel, params,
                        fitted_channels=fitted_channels,
                        paramtitles=paramtitles,
                        multwhite=lc_model.multwhite,
-                       nints=lc_model.nints)
+                       nints=[len(time)] if white else lc_model.nints)
         modellist.append(t_GP)
 
     # Combine all physical models into an AstroModel
@@ -1005,7 +1108,7 @@ def fit_channel(meta, time, flux, chan, flux_err, eventlabel, params,
                             fitted_channels=fitted_channels,
                             paramtitles=paramtitles,
                             multwhite=lc_model.multwhite,
-                            nints=lc_model.nints,
+                            nints=[len(time)] if white else lc_model.nints,
                             num_planets=meta.num_planets)
     modellist.append(astroModel)
 
@@ -1019,7 +1122,7 @@ def fit_channel(meta, time, flux, chan, flux_err, eventlabel, params,
                            fitted_channels=fitted_channels,
                            paramtitles=paramtitles,
                            multwhite=lc_model.multwhite,
-                           nints=lc_model.nints,
+                           nints=[len(time)] if white else lc_model.nints,
                            num_planets=meta.num_planets,
                            npix=meta.npix)
 
