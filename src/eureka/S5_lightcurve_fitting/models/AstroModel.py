@@ -115,6 +115,27 @@ class PlanetParams():
         self.spotlat = 0.
         self.spotlon = 0.
         self.spotcon = 0.
+        # Spotrod values, depending on if you sample in xy or uv
+        # Set the sample type here  
+        spotx_params = np.where(['spotx' == par[0:5] and par[1].isnumeric()
+                               for par in list(model.parameters.dict.keys())
+                               ])[0]
+        spotu_params = np.where(['spotu' == par[0:5] and par[1].isnumeric()
+                        for par in list(model.parameters.dict.keys())
+                        ])[0]
+        spotlat_params = np.where(['spotlat' == par[0:7] and par[1].isnumeric()
+                        for par in list(model.parameters.dict.keys())
+                        ])[0]        
+        if len(spotx_params) > 0:
+            self.samplingtype = 'xy'
+        elif len(spotu_params) > 0:
+            self.samplingtype = 'unitdisk'
+        elif len(spotlat_params) > 0:
+            self.samplingtype = 'latlon'
+        self.spotx = 0.
+        self.spoty = 0.
+        self.spotu = 0.
+        self.spotv = 0.
         for n in range(1, self.nspots):
             # read radii, latitudes, longitudes, and contrasts
             spot_id = f'{n}'
@@ -122,6 +143,10 @@ class PlanetParams():
             setattr(self, f'spotlat{spot_id}', 0)
             setattr(self, f'spotlon{spot_id}', 0)
             setattr(self, f'spotcon{spot_id}', 0)
+            setattr(self, f'spotx{spot_id}', 0)
+            setattr(self, f'spoty{spot_id}', 0)
+            setattr(self, f'spotu{spot_id}', 0)
+            setattr(self, f'spotv{spot_id}', 0)                   
         self.spotstari = 90
         self.spotrot = None
         self.spotnpts = None
