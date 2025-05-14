@@ -6,11 +6,17 @@ from astropy.coordinates import CartesianRepresentation, UnitSphericalRepresenta
 from astropy.coordinates.matrix_utilities import rotation_matrix
 
 try:
-    from pyspotrod import pyspotrod as spotrod    
-    print("Using C version of spotrod.")
+    import spotrod
 except:
-    print("Using a slower python version of spotrod. Functionality may be limited.")
-    from . import Slowspotrod as spotrod
+    pass
+
+if not('spotrod' in locals()):
+    try:
+        from pyspotrod import pyspotrod as spotrod    
+        print("Using C version of spotrod.")
+    except:
+        print("Using a slower python version of spotrod. Functionality may be limited.")
+        from . import Slowspotrod as spotrod
 
 from .BatmanModels import BatmanTransitModel
 
