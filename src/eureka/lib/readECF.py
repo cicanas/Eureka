@@ -180,12 +180,12 @@ class MetaClass:
                 crds.client.api.set_crds_server(url)
                 crds.client.api.get_server_info.cache.clear()
 
-            # If a specific CRDS context is entered in the ECF, apply it.
-            # Otherwise, log and fix the default CRDS context to make sure
-            # it doesn't change between different segments.
-            self.pmap = getattr(self, 'pmap',
-                                crds.get_context_name('jwst')[5:-5])
-            os.environ['CRDS_CONTEXT'] = f'jwst_{self.pmap}.pmap'
+                # If a specific CRDS context is entered in the ECF, apply it.
+                # Otherwise, log and fix the default CRDS context to make sure
+                # it doesn't change between different segments.
+                self.pmap = getattr(self, 'pmap',
+                                    crds.get_context_name('jwst')[5:-5])
+                os.environ['CRDS_CONTEXT'] = f'jwst_{self.pmap}.pmap'
 
         if ((item == 'pmap') and hasattr(self, 'pmap') and
                 (self.pmap is not None) and (self.pmap != value)):
