@@ -127,7 +127,7 @@ class TransitModel():
     """
     Class for generating model transit light curves with spotrod.
     """
-    def __init__(self, t, transittype="primary"):
+    def __init__(self, pl_params, t, transittype="primary"):
         """
         Does some initial pre-checks and saves some parameters.
 

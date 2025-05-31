@@ -125,13 +125,13 @@ class PlanetParams():
         self.spotcon = 0.
         # Spotrod values, depending on if you sample in xy or uv
         # Set the sample type here  
-        spotx_params = np.where(['spotx' == par[0:5] and par[1].isnumeric()
+        spotx_params = np.where(['spotx' == par[0:5] and par[-1].isnumeric()
                                for par in list(model.parameters.dict.keys())
                                ])[0]
-        spotu_params = np.where(['spotu' == par[0:5] and par[1].isnumeric()
+        spotu_params = np.where(['spotu' == par[0:5] and par[-1].isnumeric()
                         for par in list(model.parameters.dict.keys())
                         ])[0]
-        spotlat_params = np.where(['spotlat' == par[0:7] and par[1].isnumeric()
+        spotlat_params = np.where(['spotlat' == par[0:7] and par[-1].isnumeric()
                         for par in list(model.parameters.dict.keys())
                         ])[0]        
         if len(spotx_params) > 0:
