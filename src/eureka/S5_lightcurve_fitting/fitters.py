@@ -889,8 +889,8 @@ def dynestyfitter(lc, model, meta, log, **kwargs):
         pool = None
         queue_size = None
 
-    if hasattr(meta,'dynestysampler'):
-        if meta.dynestysampler == 'dynamic':
+    if hasattr(meta,'dynesty_sampler'):
+        if meta.dynesty_sampler == 'dynamic':
             dynestysampler = DynamicNestedSampler
         else:
             dynestysampler = NestedSampler
@@ -901,7 +901,10 @@ def dynestyfitter(lc, model, meta, log, **kwargs):
                             queue_size=queue_size, bound=bound, sample=sample,
                             nlive=nlive, logl_args=l_args,
                             ptform_args=[prior1, prior2, priortype])
-    sampler.run_nested(dlogz=tol, print_progress=True)  # output progress bar
+    if not meta.dynesty_sampler == 'dynamic':
+        sampler.run_nested(dlogz=tol, print_progress=True)  # output progress bar
+    else:
+        sampler.run_nested(dlogz_init=tol, print_progress=True)  # output progress bar
     res = sampler.results  # get results dictionary from sampler
 
     #Save the outputs from dynesty for future reference

@@ -150,7 +150,7 @@ class PlanetParams():
             setattr(self, f'spotrad{spot_id}', 0)
             setattr(self, f'spotlat{spot_id}', 0)
             setattr(self, f'spotlon{spot_id}', 0)
-            setattr(self, f'spotcon{spot_id}', 0)
+            setattr(self, f'spotcon{spot_id}', np.nan)
             setattr(self, f'spotx{spot_id}', 0)
             setattr(self, f'spoty{spot_id}', 0)
             setattr(self, f'spotu{spot_id}', 0)

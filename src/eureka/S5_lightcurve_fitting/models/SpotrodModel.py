@@ -173,7 +173,7 @@ class TransitModel():
                 spot_id = f'{n}'
             else:
                 spot_id = ''
-            spotrad = np.concatenate([spotrad, [getattr(pl_params, f'spotrad{spot_id}'),]])
+            spotrad = np.hstack([spotrad, [getattr(pl_params, f'spotrad{spot_id}'),]])
             spotcon = np.concatenate([spotcon, [getattr(pl_params, f'spotcon{spot_id}'),]])
             if pl_params.samplingtype == 'latlon':
                 spotlat = np.zeros(0)
@@ -193,16 +193,17 @@ class TransitModel():
                 spotx = np.concatenate([spotx, [getattr(pl_params, f'spotx{spot_id}'),]])
                 spoty = np.concatenate([spoty, [getattr(pl_params, f'spoty{spot_id}'),]])
             elif pl_params.samplingtype == 'unitdisk':
-                spotu = np.zeros(0)
-                spotv = np.zeros(0)
-                spotu = np.concatenate([spotu, [getattr(pl_params, f'spotu{spot_id}'),]])
-                spotv = np.concatenate([spotv, [getattr(pl_params, f'spotv{spot_id}'),]])                
+                spotu = np.atleast_1d(getattr(pl_params, f'spotu{spot_id}'))
+                spotv = np.atleast_1d(getattr(pl_params, f'spotv{spot_id}'))
                 # Convert U/V to X/Y
-                spotx = np.sqrt(spotu) * np.cos(2*np.pi*spotv)
-                spoty = np.sqrt(spotu) * np.sin(2*np.pi*spotv)
+                spotx = np.concatenate([spotx, np.sqrt(spotu) * np.cos(2*np.pi*spotv)])
+                spoty = np.concatenate([spoty, np.sqrt(spotu) * np.sin(2*np.pi*spotv)])
         if pl_params.spotnpts is None:
             # Have a default spotnpts for spotrod, this defines the number of rings for integration
             pl_params.spotnpts = 1000
+        
+        # Set nan contrasts to value of spot0
+        spotcon[np.isnan(spotcon)] = spotcon[0]
 
         inverse = False
         if pl_params.rp < 0:
@@ -226,10 +227,10 @@ class TransitModel():
                                                                     pl_params.rp, #rp/r*
                                                                     rrings, #radii of integration annuli in stellar radii, non-decreasing
                                                                     weights, #2.0 * limb darkening at r[i] * width of annulus i 
-                                                                    spotx[:, None], #X coording of spot
-                                                                    spoty[:, None], #Y coord of spot
-                                                                    spotrad[:, None], #Spot radius
-                                                                    spotcon[:,None], #Spot contrast
+                                                                    spotx, #X coording of spot
+                                                                    spoty, #Y coord of spot
+                                                                    spotrad, #Spot radius
+                                                                    spotcon, #Spot contrast
                                                                     planetangle)
 
         if inverse:
