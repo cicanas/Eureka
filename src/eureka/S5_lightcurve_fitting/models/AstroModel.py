@@ -384,6 +384,7 @@ class PlanetParams():
         elif self.limb_dark == 'kipping2016':
             self.limb_dark = 'nonlinear'
             if eval:
+                self.u_original = np.copy(self.u)
                 u1 = 0
                 u2, u3, u4 = LDC3.forward(self.u)
                 self.u_passed = LDC3.criteriatest(0,[u2,u3,u4])
