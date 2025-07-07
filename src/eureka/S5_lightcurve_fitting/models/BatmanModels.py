@@ -9,6 +9,7 @@ from . import Model
 from .AstroModel import PlanetParams, correct_light_travel_time, get_ecl_midpt
 from ..limb_darkening_fit import ld_profile
 from ...lib.split_channels import split
+from functools import partial
 
 
 class BatmanTransitModel(Model):
@@ -28,7 +29,9 @@ class BatmanTransitModel(Model):
         super().__init__(**kwargs)
         self.name = 'batman transit'
         # Define transit model to be used
-        self.transit_model = batman.TransitModel
+        self.transit_model = partial(batman.TransitModel,
+                                     max_err=kwargs['max_err'],
+                                     fac=kwargs['fac'])
 
         # Define model type (physical, systematic, other)
         self.modeltype = 'physical'
@@ -162,7 +165,9 @@ class BatmanEclipseModel(Model):
         super().__init__(**kwargs)
         self.name = 'batman eclipse'
         # Define transit model to be used
-        self.transit_model = batman.TransitModel
+        self.transit_model = partial(batman.TransitModel,
+                                     max_err=kwargs['max_err'],
+                                     fac=kwargs['fac'])
 
         # Define model type (physical, systematic, other)
         self.modeltype = 'physical'
