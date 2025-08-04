@@ -330,12 +330,10 @@ class GPModel(Model):
         elif self.gp_code_name == 'celerite':
             if kernel_name == 'Matern32':
                 # get metric and amplitude for the current kernel and channel
-                amp = np.exp(self.coeffs[c, k, 0])
+                sigma = np.sqrt(np.exp(self.coeffs[c, k, 0]))
                 metric = np.exp(self.coeffs[c, k, 1])
 
-                kernel = celerite2.terms.Matern32Term(sigma=1, rho=metric)
-                # Setting the amplitude
-                kernel *= celerite2.terms.RealTerm(a=amp, c=0)
+                kernel = celerite2.terms.Matern32Term(sigma=sigma, rho=metric)
             elif kernel_name == 'ExpMat':
                 # get metric and amplitude for the current kernel and channel
                 amp = np.exp(self.coeffs[c, k, 0])
