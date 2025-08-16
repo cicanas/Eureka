@@ -3,6 +3,14 @@ import astropy.constants as const
 from copy import copy
 import inspect
 
+try:
+    import os
+    os.sys.path.append(os.environ.get('LDC3_PATH'))
+    import LDC3
+except:
+    print("Could not import LDC3. Code will break if you specify an LD law of 'kipping2016'.")
+
+
 from .Model import Model
 from .KeplerOrbit import KeplerOrbit
 from ..limb_darkening_fit import ld_profile
@@ -105,6 +113,27 @@ class PlanetParams():
         self.spotlat = 0.
         self.spotlon = 0.
         self.spotcon = 0.
+        # Spotrod values, depending on if you sample in xy or uv
+        # Set the sample type here  
+        spotx_params = np.where(['spotx' == par[0:5] and par[-1].isnumeric()
+                               for par in list(model.parameters.dict.keys())
+                               ])[0]
+        spotu_params = np.where(['spotu' == par[0:5] and par[-1].isnumeric()
+                        for par in list(model.parameters.dict.keys())
+                        ])[0]
+        spotlat_params = np.where(['spotlat' == par[0:7] and par[-1].isnumeric()
+                        for par in list(model.parameters.dict.keys())
+                        ])[0]        
+        if len(spotx_params) > 0:
+            self.samplingtype = 'xy'
+        elif len(spotu_params) > 0:
+            self.samplingtype = 'unitdisk'
+        elif len(spotlat_params) > 0:
+            self.samplingtype = 'latlon'
+        self.spotx = 0.
+        self.spoty = 0.
+        self.spotu = 0.
+        self.spotv = 0.        
         for n in range(1, self.nspots):
             # read radii, latitudes, longitudes, and contrasts
             spot_id = f'{n}'
@@ -112,6 +141,10 @@ class PlanetParams():
             setattr(self, f'spotlat{spot_id}', 0.)
             setattr(self, f'spotlon{spot_id}', 0.)
             setattr(self, f'spotcon{spot_id}', 0.)
+            setattr(self, f'spotu{spot_id}', 0)
+            setattr(self, f'spotv{spot_id}', 0)   
+            setattr(self, f'spotx{spot_id}', 0)
+            setattr(self, f'spoty{spot_id}', 0)                           
         self.spotstari = 90.
         self.spotstarobl = 0.
         self.spotrot = None
@@ -338,6 +371,18 @@ class PlanetParams():
                 self.u1 = 2*lib.sqrt(self.u1)*self.u2
                 self.u2 = lib.sqrt(self.u1)*(1-2*self.u2)
                 self.u = lib.array([self.u1, self.u2])
+        elif self.limb_dark == 'kipping2016':
+            self.limb_dark = 'nonlinear'
+            if eval:
+                self.u_original = copy(self.u)
+                self.u1 = 0.
+                self.u2, self.u3, self.u4 = LDC3.forward(self.u)
+                self.u_passed = LDC3.criteriatest(0,[self.u2,self.u3,self.u4])
+                self.u = lib.array([self.u1, self.u2, self.u3, self.u4])
+            else:
+                self.u1 = 0.
+                self.u2, self.u3, self.u4 = LDC3.forward(self.u)
+                self.u = lib.array([self.u1, self.u2, self.u3, self.u4])                
 
         # Nicely packaging Harmonica coefficients
         self.ab = lib.array([self.rp,

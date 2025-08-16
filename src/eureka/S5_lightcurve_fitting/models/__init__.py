@@ -4,6 +4,7 @@ from .BatmanModels import BatmanTransitModel, BatmanEclipseModel
 from .CatwomanModel import CatwomanTransitModel
 from .CommonModeModel import CommonModeModel
 from .FleckModel import FleckTransitModel
+from .SpotrodModel import SpotrodTransitModel
 from .CentroidModel import CentroidModel
 from .DampedOscillator import DampedOscillatorModel
 from .ExpRampModel import ExpRampModel

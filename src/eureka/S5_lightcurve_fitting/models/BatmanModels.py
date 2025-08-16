@@ -9,6 +9,7 @@ from . import Model
 from .AstroModel import PlanetParams, correct_light_travel_time, get_ecl_midpt
 from ..limb_darkening_fit import ld_profile
 from ...lib.split_channels import split
+from functools import partial
 
 
 class BatmanTransitModel(Model):
@@ -28,7 +29,9 @@ class BatmanTransitModel(Model):
         super().__init__(**kwargs)
         self.name = 'batman transit'
         # Define transit model to be used
-        self.transit_model = batman.TransitModel
+        self.transit_model = partial(batman.TransitModel,
+                                     max_err=kwargs['max_err'],
+                                     fac=kwargs['fac'])
 
         # Define model type (physical, systematic, other)
         self.modeltype = 'physical'
@@ -129,7 +132,9 @@ class BatmanTransitModel(Model):
                          (1 < pl_params.a) and (-1 <= pl_params.ecosw <= 1) and
                          (-1 <= pl_params.esinw <= 1))
                     or (self.parameters.limb_dark.value == 'kipping2013' and
-                        pl_params.u_original[0] <= 0)):
+                        pl_params.u_original[0] <= 0)
+                    or (self.parameters.limb_dark.value == 'kipping2016' and
+                        pl_params.u_passed != 1)):
                     # Returning nans or infs breaks the fits, so this was the
                     # best I could think of
                     light_curve = 1e6*np.ma.ones(time.shape)
@@ -160,7 +165,9 @@ class BatmanEclipseModel(Model):
         super().__init__(**kwargs)
         self.name = 'batman eclipse'
         # Define transit model to be used
-        self.transit_model = batman.TransitModel
+        self.transit_model = partial(batman.TransitModel,
+                                     max_err=kwargs['max_err'],
+                                     fac=kwargs['fac'])
 
         # Define model type (physical, systematic, other)
         self.modeltype = 'physical'

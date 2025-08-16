@@ -316,6 +316,10 @@ def plot_spectra(eventlabel, ecf_path=None, s5_meta=None, input_meta=None):
                         limb_law = limb_law[1:-1]
                         if limb_law == 'kipping2013':
                             limb_law = 'Kipping (2013)'
+                            meta.y_label = '$q_{\\rm '+meta.y_param_basic[-1]+'}$'
+                        elif limb_law == 'kipping2016':
+                            limb_law = 'Kipping (2016)'
+                            meta.y_label = '$q_{\\rm '+meta.y_param_basic[-1]+'}$'
                         meta.y_label += ' for '+limb_law+suffix
                     elif meta.y_param_basic in [f'c{i}' for i in range(0, 10)]:
                         # Polynomial in time coefficient

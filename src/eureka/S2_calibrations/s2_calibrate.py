@@ -254,6 +254,13 @@ class EurekaSpec2Pipeline(Spec2Pipeline):
         # multiple files
         self.suffix = None
 
+        if hasattr(meta,'saveall'):
+            # Save the outputs for each step
+            if meta.saveall:
+                for thisstep in np.array(list(self.steps.keys())):
+                    exec('self.{}.save_results=True'.format(thisstep))
+                    exec('self.{}.output_dir="{}"'.format(thisstep,meta.outputdir)) 
+
         # Call the main Spec2Pipeline function (defined in the parent class)
         log.writelog('Running the Spec2Pipeline\n')
         # Must call the pipeline in this way to ensure the skip booleans are

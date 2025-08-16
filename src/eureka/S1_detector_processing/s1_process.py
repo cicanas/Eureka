@@ -223,6 +223,13 @@ class EurekaS1Pipeline(Detector1Pipeline):
                 self.ramp_fit.custom_exponents = \
                     meta.default_ramp_fit_custom_exponents
 
+        # Save the outputs for each step in the S1 output directory
+        if hasattr(meta,'saveall'):
+            if meta.saveall:
+                for thisstep in np.array(list(self.steps.keys())):
+                    exec('self.{}.save_results=True'.format(thisstep))
+                    exec('self.{}.output_dir="{}"'.format(thisstep,meta.outputdir))
+
         # Run Stage 1
         self.run(filename)
 

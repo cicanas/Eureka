@@ -20,6 +20,12 @@ try:
 except ImportError:
     from bokeh.models.layouts import TabPanel as Panel
     from bokeh.models.layouts import Tabs
+try:
+    import os
+    os.sys.path.append(os.environ.get('LDC3_PATH'))
+    import LDC3
+except:
+    print("Could not import LDC3. Code will break if you specify an LD law of 'kipping2016'.")    
 
 from . import utils
 from ..lib import plots
@@ -36,7 +42,7 @@ def ld_profile(name='quadratic', latex=False, use_gen_ld='batman'):
     ----------
     name : str; optional
         The name of the limb darkening profile function to use,
-        including 'uniform', 'linear', 'quadratic', 'kipping2013',
+        including 'uniform', 'linear', 'quadratic', 'kipping2013', 'kipping2016',
         'squareroot', 'logarithmic', 'exponential', '3-parameter',
         and '4-parameter'. Defaults to 'quadratic'.
     latex : bool; optional
@@ -60,7 +66,7 @@ def ld_profile(name='quadratic', latex=False, use_gen_ld='batman'):
     https://exotic-ld.readthedocs.io/en/latest/views/quick_start.html
     """
     # Supported profiles a la BATMAN and/or POET
-    names = ['uniform', 'linear', 'quadratic', 'kipping2013', 'squareroot',
+    names = ['uniform', 'linear', 'quadratic', 'kipping2013', 'kipping2016', 'squareroot',
              'logarithmic', 'exponential', '3-parameter', '4-parameter']
 
     # Generated profiles by exotic-ld
@@ -79,6 +85,8 @@ def ld_profile(name='quadratic', latex=False, use_gen_ld='batman'):
             profile = quadratic
         elif name == 'kipping2013':
             profile = kipping2013
+        elif name == 'kipping2016':
+            profile = kipping2016
         elif name == 'squareroot':
             profile = square_root
         elif name == 'logarithmic':
@@ -178,6 +186,29 @@ def kipping2013(m, c1, c2):
     u1 = 2*np.sqrt(c1)*c2
     u2 = np.sqrt(c1)*(1-2*c2)
     return 1. - u1*(1.-m) - u2*(1.-m)**2
+
+
+def kipping2016(m, c1, c2, c3):
+    """Reparameterized 3-parameter (Kipping 2016) limb darkening.
+
+    Parameters
+    ----------
+    m : ndarray, float
+        The normalized radial coordinate.
+    c1 : float
+        The first limb darkening coefficient.
+    c2 : float
+        The second limb darkening coefficient.
+    c3 : float
+        The third limb darkening coefficient.
+        
+    Returns
+    -------
+    ndarray, float
+        The relative intensity of the star at each position m.
+    """
+    u1, u2, u3 = LDC3.forward([c1,c2,c3])
+    return 1. - u1*(1.-m) - u2*(1.-m**1.5) - u3*(1.-m**2)
 
 
 def square_root(m, c1, c2):
@@ -336,7 +367,7 @@ class LDC:
                          'exponential': 'green', 'linear': 'orange',
                          'squareroot': 'cyan', '3-parameter': 'magenta',
                          'logarithmic': 'pink', 'uniform': 'purple',
-                         'kipping2013': 'brown'}
+                         'kipping2013': 'brown', 'kipping2016': 'goldenrod'}
 
         self.count = 1
 

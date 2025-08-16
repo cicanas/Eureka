@@ -15,6 +15,7 @@ import emcee
 
 from dynesty import NestedSampler, DynamicNestedSampler
 from dynesty.utils import resample_equal
+import pickle
 
 from .likelihood import (computeRedChiSq, lnprob, ln_like, ptform,
                          update_uncertainty)
@@ -909,6 +910,35 @@ def dynestyfitter(lc, model, meta, log, **kwargs):
 
     # Get the results from the sampler
     res = sampler.results
+
+    #Save the outputs from dynesty for future reference
+    out = {}
+    out['dynesty_output'] = res
+    out['lnZ'] = res.logz[-1]
+    out['lnZerr'] = res.logzerr[-1]
+    out['BIC'] = ndims * np.log(lc.flux.shape[0]) - 2 * res.logl[-1]
+    out['AIC'] = 2 * ndims - 2 * res.logl[-1]
+    out['nparams'] = ndims
+    out['nobs'] = lc.flux.shape[0]
+    if lc.white:
+        picklename = 'S5_dynesty_results_white.pkl'
+    elif lc.share:
+        picklename = 'S5_dynesty_results_shared.pkl'
+    else:
+        ch_number = str(lc.channel).zfill(len(str(lc.nchannel)))
+        picklename = f'S5_dynesty_results_ch{ch_number}.pkl'
+    with open(os.path.join(meta.outputdir,picklename),'wb') as picklefile:
+        pickle.dump(out,picklefile)
+
+    #Print the loglikelihood and the parameters here, courtesy of JLR
+    log_likelihoods = res.logl
+    sam = res.samples
+    max_ll_index = np.argmax(log_likelihoods)
+    max_ll_params = sam[max_ll_index]
+    print(f"Maximum log-likelihood: {log_likelihoods[max_ll_index]}")
+    print(f"Parameters at maximum log-likelihood: {max_ll_params}")
+    log.writelog(f"Maximum log-likelihood: {log_likelihoods[max_ll_index]}")
+    log.writelog(f"Parameters at maximum log-likelihood: {max_ll_params}")        
 
     # Clean up pool
     if meta.ncpu > 1:
