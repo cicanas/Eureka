@@ -203,7 +203,8 @@ class TransitModel():
             pl_params.spotnpts = 1000
         
         # Set nan contrasts to value of spot0
-        spotcon[np.isnan(spotcon)] = spotcon[0]
+        tempcon = np.array(spotcon,copy=True)
+        tempcon[np.isnan(spotcon)] = spotcon[0]
 
         inverse = False
         if pl_params.rp < 0:
@@ -230,7 +231,7 @@ class TransitModel():
                                                                     spotx, #X coording of spot
                                                                     spoty, #Y coord of spot
                                                                     spotrad, #Spot radius
-                                                                    spotcon, #Spot contrast
+                                                                    tempcon, #Spot contrast
                                                                     planetangle)
 
         if inverse:
