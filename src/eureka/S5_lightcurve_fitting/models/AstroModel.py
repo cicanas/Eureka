@@ -128,7 +128,7 @@ class PlanetParams():
             self.samplingtype = 'xy'
         elif len(spotu_params) > 0:
             self.samplingtype = 'unitdisk'
-        else:
+        elif len(spotlat_params):
             self.samplingtype = 'latlon'
         self.spotx = 0.
         self.spoty = 0.
