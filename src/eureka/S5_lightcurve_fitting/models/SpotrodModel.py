@@ -185,7 +185,7 @@ class TransitModel():
                 # Represent those spots with cartesian coordinates (x, y, z)
                 # In this coordinate system, the observer is at positive x->inf,
                 # the star is at the origin, and (y, z) is the sky plane.
-                stellar_inclination = rotation_matrix(pl_params.spotstari - 90*unit.deg, axis='y')
+                stellar_inclination = rotation_matrix((pl_params.spotstari - 90)*unit.deg, axis='y')
                 cartesian = UnitSphericalRepresentation(spotlon*unit.degree, spotlat*unit.degree).represent_as(CartesianRepresentation).transform(stellar_inclination)              
                 spotx = cartesian.y.value
                 spoty = cartesian.z.value
